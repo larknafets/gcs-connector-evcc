@@ -46,6 +46,42 @@ docker run -it --rm \
   ghcr.io/larknafets/gc-connector-evcc:latest init
 ```
 
+#### Docker Compose
+
+Für den Dauerbetrieb (automatischer Neustart bei Absturz/Reboot) eignet sich Docker Compose besser als ein einzelner `docker run`-Aufruf:
+
+```yaml
+services:
+  gcs-connector:
+    image: ghcr.io/larknafets/gc-connector-evcc:latest
+    container_name: gcs-connector
+    restart: unless-stopped
+    volumes:
+      - ./gcs-connector-data:/config
+```
+
+`docker compose up -d` startet den Connector im Hintergrund; `.env` muss vorher unter `gcs-connector-data/.env` existieren (siehe oben, `init`-Aufruf). Läuft evcc selbst ebenfalls per Docker Compose auf demselben Host, am einfachsten beide Services im selben Compose-Projekt (oder im selben externen Netzwerk) betreiben und `evcc_base_url` auf den evcc-Servicenamen statt eine IP-Adresse setzen, z. B.:
+
+```yaml
+services:
+  evcc:
+    image: evcc/evcc:latest
+    container_name: evcc
+    restart: unless-stopped
+    # ... evcc-eigene Konfiguration ...
+
+  gcs-connector:
+    image: ghcr.io/larknafets/gc-connector-evcc:latest
+    container_name: gcs-connector
+    restart: unless-stopped
+    depends_on:
+      - evcc
+    volumes:
+      - ./gcs-connector-data:/config
+```
+
+`evcc_base_url` wäre dann `http://evcc:7070`, da beide Services im selben Compose-Netzwerk automatisch per Servicename erreichbar sind.
+
 ### Aus dem Quellcode bauen
 
 ```bash
@@ -54,7 +90,7 @@ cd gc-connector-evcc
 go build -o gcs-connector ./cmd/gcs-connector
 ```
 
-Benötigt Go 1.23 oder neuer.
+Benötigt Go 1.25 oder neuer.
 
 ## Erststart / Konfiguration
 
