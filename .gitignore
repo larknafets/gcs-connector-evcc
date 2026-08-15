@@ -1,0 +1,5 @@
+/dist/
+*.env
+!.env.example
+state.json
+state.json.lock
