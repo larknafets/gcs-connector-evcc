@@ -84,6 +84,10 @@ services:
 
 `evcc_base_url` wäre dann `http://evcc:7070`, da beide Services im selben Compose-Netzwerk automatisch per Servicename erreichbar sind.
 
+### Home Assistant Add-on
+
+Wer evcc über Home Assistant betreibt, kann den Connector auch als Supervisor-Add-on installieren, konfiguriert über die native Home-Assistant-Options-UI statt einer `.env`-Datei — siehe [gcs-hassio-addons](https://github.com/larknafets/gcs-hassio-addons).
+
 ### Aus dem Quellcode bauen
 
 ```bash
