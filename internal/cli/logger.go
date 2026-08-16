@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/larknafets/gc-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
 
 // buildLogger sets up structured logging per the connector's log_file/debug

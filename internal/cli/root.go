@@ -15,13 +15,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/larknafets/gc-connector-evcc/internal/config"
-	"github.com/larknafets/gc-connector-evcc/internal/evcc"
-	"github.com/larknafets/gc-connector-evcc/internal/gcs"
-	"github.com/larknafets/gc-connector-evcc/internal/loop"
-	"github.com/larknafets/gc-connector-evcc/internal/state"
-	gcssync "github.com/larknafets/gc-connector-evcc/internal/sync"
-	"github.com/larknafets/gc-connector-evcc/internal/wizard"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
+	"github.com/larknafets/gcs-connector-evcc/internal/gcs"
+	"github.com/larknafets/gcs-connector-evcc/internal/loop"
+	"github.com/larknafets/gcs-connector-evcc/internal/state"
+	gcssync "github.com/larknafets/gcs-connector-evcc/internal/sync"
+	"github.com/larknafets/gcs-connector-evcc/internal/wizard"
 )
 
 // Execute builds and runs the gcs-connector command tree.

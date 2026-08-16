@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/larknafets/gc-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
 
 // Answers holds the raw string form of the ten .env variables, as collected

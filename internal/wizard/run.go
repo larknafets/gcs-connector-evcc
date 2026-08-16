@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/huh"
-	"github.com/larknafets/gc-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
 
 // ErrAborted is returned when the user declines to overwrite an existing

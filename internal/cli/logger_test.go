@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/larknafets/gc-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
 
 func TestBuildLogger_DebugFalseUsesInfoLevel(t *testing.T) {

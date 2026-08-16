@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/larknafets/gc-connector-evcc/internal/config"
+	"github.com/larknafets/gcs-connector-evcc/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

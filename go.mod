@@ -1,4 +1,4 @@
-module github.com/larknafets/gc-connector-evcc
+module github.com/larknafets/gcs-connector-evcc
 
 go 1.25
 

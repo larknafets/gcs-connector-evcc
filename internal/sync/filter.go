@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/larknafets/gc-connector-evcc/internal/evcc"
+	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
 )
 
 // FilterFinished keeps only sessions that have completed (Finished != nil).

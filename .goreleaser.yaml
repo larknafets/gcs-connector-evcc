@@ -51,4 +51,4 @@ changelog:
 release:
   github:
     owner: larknafets
-    name: gc-connector-evcc
+    name: gcs-connector-evcc

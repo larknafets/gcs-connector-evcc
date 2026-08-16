@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/larknafets/gc-connector-evcc/internal/cli"
+	"github.com/larknafets/gcs-connector-evcc/internal/cli"
 )
 
 func main() {

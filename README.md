@@ -1,4 +1,4 @@
-# gc-connector-evcc
+# gcs-connector-evcc
 
 Der **evcc-Connector** für [Green Charging Society (GCS)](https://github.com/larknafets/gc-platform) — ein Peer2Peer-Netzwerk zum kostenfreien Tausch von Ladestrom zwischen Wallbox-Besitzern.
 
@@ -19,14 +19,14 @@ Der Connector ist **optional** — ohne ihn funktioniert GCS weiterhin über man
 
 ### Fertiges Binary (empfohlen)
 
-Binaries für Windows, macOS und Linux (jeweils amd64) sowie Raspberry Pi (ARMv6/ARMv7/aarch64) werden bei jedem Release automatisch gebaut und stehen unter [Releases](https://github.com/larknafets/gc-connector-evcc/releases) zum Download bereit. Einfach das passende Archiv herunterladen, entpacken und die `gcs-connector`-Binary an einen Ort deiner Wahl legen.
+Binaries für Windows, macOS und Linux (jeweils amd64) sowie Raspberry Pi (ARMv6/ARMv7/aarch64) werden bei jedem Release automatisch gebaut und stehen unter [Releases](https://github.com/larknafets/gcs-connector-evcc/releases) zum Download bereit. Einfach das passende Archiv herunterladen, entpacken und die `gcs-connector`-Binary an einen Ort deiner Wahl legen.
 
 ### Docker
 
 Alternativ steht ein Multi-Arch-Image (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) über die GitHub Container Registry bereit — praktisch, wenn der Connector auf demselben Host wie evcc per Docker Compose mitlaufen soll:
 
 ```bash
-docker pull ghcr.io/larknafets/gc-connector-evcc:latest
+docker pull ghcr.io/larknafets/gcs-connector-evcc:latest
 ```
 
 Der Container erwartet `.env` und `state.json` unter `/config` — dieses Verzeichnis solltest du auf ein persistentes Host-Verzeichnis mounten:
@@ -35,7 +35,7 @@ Der Container erwartet `.env` und `state.json` unter `/config` — dieses Verzei
 docker run -d \
   --name gcs-connector \
   -v $(pwd)/gcs-connector-data:/config \
-  ghcr.io/larknafets/gc-connector-evcc:latest
+  ghcr.io/larknafets/gcs-connector-evcc:latest
 ```
 
 Vor dem ersten Start muss unter `gcs-connector-data/.env` eine Config vorhanden sein (siehe [Konfiguration](#konfiguration)) — entweder manuell angelegt oder über den Setup-Wizard erzeugt:
@@ -43,7 +43,7 @@ Vor dem ersten Start muss unter `gcs-connector-data/.env` eine Config vorhanden 
 ```bash
 docker run -it --rm \
   -v $(pwd)/gcs-connector-data:/config \
-  ghcr.io/larknafets/gc-connector-evcc:latest init
+  ghcr.io/larknafets/gcs-connector-evcc:latest init
 ```
 
 #### Docker Compose
@@ -53,7 +53,7 @@ Für den Dauerbetrieb (automatischer Neustart bei Absturz/Reboot) eignet sich Do
 ```yaml
 services:
   gcs-connector:
-    image: ghcr.io/larknafets/gc-connector-evcc:latest
+    image: ghcr.io/larknafets/gcs-connector-evcc:latest
     container_name: gcs-connector
     restart: unless-stopped
     volumes:
@@ -71,7 +71,7 @@ services:
     # ... evcc-eigene Konfiguration ...
 
   gcs-connector:
-    image: ghcr.io/larknafets/gc-connector-evcc:latest
+    image: ghcr.io/larknafets/gcs-connector-evcc:latest
     container_name: gcs-connector
     restart: unless-stopped
     depends_on:
@@ -85,8 +85,8 @@ services:
 ### Aus dem Quellcode bauen
 
 ```bash
-git clone https://github.com/larknafets/gc-connector-evcc.git
-cd gc-connector-evcc
+git clone https://github.com/larknafets/gcs-connector-evcc.git
+cd gcs-connector-evcc
 go build -o gcs-connector ./cmd/gcs-connector
 ```
 

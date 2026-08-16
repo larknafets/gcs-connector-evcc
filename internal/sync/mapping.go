@@ -7,8 +7,8 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/larknafets/gc-connector-evcc/internal/evcc"
-	"github.com/larknafets/gc-connector-evcc/internal/gcs"
+	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
+	"github.com/larknafets/gcs-connector-evcc/internal/gcs"
 )
 
 // ToChargePayload maps a finished evcc session onto the GCS Connector-API

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/larknafets/gc-connector-evcc/internal/evcc"
-	"github.com/larknafets/gc-connector-evcc/internal/gcs"
-	"github.com/larknafets/gc-connector-evcc/internal/state"
+	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
+	"github.com/larknafets/gcs-connector-evcc/internal/gcs"
+	"github.com/larknafets/gcs-connector-evcc/internal/state"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

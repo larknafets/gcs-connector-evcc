@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/larknafets/gc-connector-evcc/internal/evcc"
+	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
 	"github.com/stretchr/testify/assert"
 )
 
