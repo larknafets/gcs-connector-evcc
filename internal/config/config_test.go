@@ -32,6 +32,61 @@ func TestFromMap_ValidMinimalConfig(t *testing.T) {
 	assert.Empty(t, cfg.IgnoreLoadpoints)
 	assert.False(t, cfg.Debug)
 	assert.Equal(t, "", cfg.LogFile)
+	assert.Equal(t, 0, cfg.WebhookPort)
+	assert.Equal(t, "", cfg.WebhookSecret)
+}
+
+func TestFromMap_SyncIntervalDefaultsTo60WhenUnset(t *testing.T) {
+	env := validEnv()
+	delete(env, "sync_interval_minutes")
+
+	cfg, err := FromMap(env)
+	require.NoError(t, err)
+	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
+}
+
+func TestFromMap_SyncIntervalDefaultsTo60WhenEmpty(t *testing.T) {
+	env := validEnv()
+	env["sync_interval_minutes"] = ""
+
+	cfg, err := FromMap(env)
+	require.NoError(t, err)
+	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
+}
+
+func TestFromMap_WebhookFieldsParsed(t *testing.T) {
+	env := validEnv()
+	env["webhook_port"] = "8080"
+	env["webhook_secret"] = "s3cr3t"
+
+	cfg, err := FromMap(env)
+	require.NoError(t, err)
+	assert.Equal(t, 8080, cfg.WebhookPort)
+	assert.Equal(t, "s3cr3t", cfg.WebhookSecret)
+}
+
+func TestFromMap_WebhookPortWithoutSecretFails(t *testing.T) {
+	env := validEnv()
+	env["webhook_port"] = "8080"
+
+	_, err := FromMap(env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "webhook_secret")
+}
+
+func TestFromMap_WebhookPortInvalid(t *testing.T) {
+	cases := []string{"0", "-1", "not-a-number", "70000"}
+	for _, v := range cases {
+		t.Run(v, func(t *testing.T) {
+			env := validEnv()
+			env["webhook_port"] = v
+			env["webhook_secret"] = "s3cr3t"
+
+			_, err := FromMap(env)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "webhook_port")
+		})
+	}
 }
 
 func TestFromMap_OptionalFieldsParsed(t *testing.T) {
@@ -61,7 +116,7 @@ func TestFromMap_EmptyIgnoreListsStayEmpty(t *testing.T) {
 }
 
 func TestFromMap_MissingRequiredField(t *testing.T) {
-	for _, field := range []string{"api_base_url", "evcc_base_url", "api_key", "api_secret", "site_name", "sync_interval_minutes"} {
+	for _, field := range []string{"api_base_url", "evcc_base_url", "api_key", "api_secret", "site_name"} {
 		t.Run(field, func(t *testing.T) {
 			env := validEnv()
 			delete(env, field)
@@ -74,7 +129,7 @@ func TestFromMap_MissingRequiredField(t *testing.T) {
 }
 
 func TestFromMap_SyncIntervalMustBePositiveInteger(t *testing.T) {
-	cases := []string{"0", "-5", "not-a-number", ""}
+	cases := []string{"0", "-5", "not-a-number"}
 	for _, v := range cases {
 		t.Run(v, func(t *testing.T) {
 			env := validEnv()

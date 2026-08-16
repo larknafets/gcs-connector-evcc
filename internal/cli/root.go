@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +22,7 @@ import (
 	"github.com/larknafets/gcs-connector-evcc/internal/loop"
 	"github.com/larknafets/gcs-connector-evcc/internal/state"
 	gcssync "github.com/larknafets/gcs-connector-evcc/internal/sync"
+	"github.com/larknafets/gcs-connector-evcc/internal/webhook"
 	"github.com/larknafets/gcs-connector-evcc/internal/wizard"
 )
 
@@ -97,6 +99,20 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 		return nil
 	}
 
+	// The webhook listener binds before the daemon loop starts, so a port
+	// conflict fails startup immediately instead of surfacing later from a
+	// background goroutine.
+	var triggerCh chan struct{}
+	var webhookListener net.Listener
+	if cfg.WebhookPort != 0 {
+		triggerCh = make(chan struct{}, 1)
+		var err error
+		webhookListener, err = net.Listen("tcp", fmt.Sprintf(":%d", cfg.WebhookPort))
+		if err != nil {
+			return fmt.Errorf("webhook-Listener konnte nicht auf Port %d starten: %w", cfg.WebhookPort, err)
+		}
+	}
+
 	runner := &loop.Runner{
 		Interval: time.Duration(cfg.SyncIntervalMinutes) * time.Minute,
 		RunCycle: func(ctx context.Context) error {
@@ -111,10 +127,21 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 		OnError: func(err error) {
 			logger.Warn("Sync-Takt fehlgeschlagen, nächster Versuch beim nächsten Takt", "error", err)
 		},
+		Trigger: triggerCh,
 	}
 
 	shutdownCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if webhookListener != nil {
+		whServer := &webhook.Server{Secret: cfg.WebhookSecret, Trigger: triggerCh, Logger: logger}
+		go func() {
+			if err := whServer.Serve(shutdownCtx, webhookListener); err != nil {
+				logger.Error("webhook-Listener beendet", "error", err)
+			}
+		}()
+		logger.Info("webhook-Listener gestartet, wartet auf Trigger-Requests", "port", cfg.WebhookPort)
+	}
 
 	return runner.Run(shutdownCtx)
 }

@@ -17,11 +17,13 @@ import (
 func TestDefaultAnswers_PrefillsOptionalFieldsOnly(t *testing.T) {
 	a := DefaultAnswers()
 	assert.Equal(t, "false", a.Debug)
+	assert.Equal(t, "60", a.SyncIntervalMinutes)
 	assert.Equal(t, "", a.LogFile)
 	assert.Equal(t, "", a.IgnoreVehicles)
 	assert.Equal(t, "", a.IgnoreLoadpoints)
 	assert.Equal(t, "", a.APIBaseURL)
-	assert.Equal(t, "", a.SyncIntervalMinutes)
+	assert.Equal(t, "", a.WebhookPort)
+	assert.Equal(t, "", a.WebhookSecret)
 }
 
 func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
@@ -36,6 +38,8 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 		IgnoreLoadpoints:    []string{"Werkstatt"},
 		Debug:               true,
 		LogFile:             "/var/log/gcs.log",
+		WebhookPort:         8080,
+		WebhookSecret:       "s3cr3t",
 	}
 
 	a := AnswersFromConfig(cfg)
@@ -49,6 +53,14 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 	assert.Equal(t, "Werkstatt", a.IgnoreLoadpoints)
 	assert.Equal(t, "true", a.Debug)
 	assert.Equal(t, "/var/log/gcs.log", a.LogFile)
+	assert.Equal(t, "8080", a.WebhookPort)
+	assert.Equal(t, "s3cr3t", a.WebhookSecret)
+}
+
+func TestAnswersFromConfig_WebhookPortZeroBecomesEmptyString(t *testing.T) {
+	cfg := config.Config{WebhookPort: 0}
+	a := AnswersFromConfig(cfg)
+	assert.Equal(t, "", a.WebhookPort)
 }
 
 func TestWriteEnvFile_ProducesConfigThatConfigPackageCanLoad(t *testing.T) {
@@ -76,6 +88,27 @@ func TestWriteEnvFile_ProducesConfigThatConfigPackageCanLoad(t *testing.T) {
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
 	assert.Equal(t, []string{"James", "Zweitwagen"}, cfg.IgnoreVehicles)
 	assert.True(t, cfg.Debug)
+}
+
+func TestWriteEnvFile_RoundTripsWebhookFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+
+	answers := DefaultAnswers()
+	answers.APIBaseURL = "https://gcs.example.com"
+	answers.EVCCBaseURL = "http://192.168.1.50:7070"
+	answers.APIKey = "k"
+	answers.APISecret = "s"
+	answers.SiteName = "site"
+	answers.WebhookPort = "8080"
+	answers.WebhookSecret = "s3cr3t"
+
+	require.NoError(t, WriteEnvFile(path, answers))
+
+	cfg, err := config.Load(path)
+	require.NoError(t, err)
+	assert.Equal(t, 8080, cfg.WebhookPort)
+	assert.Equal(t, "s3cr3t", cfg.WebhookSecret)
 }
 
 func TestWriteEnvFile_EscapesBackslashesForWindowsPaths(t *testing.T) {

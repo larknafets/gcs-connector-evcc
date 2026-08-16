@@ -8,7 +8,7 @@ Der Connector ist **optional** — ohne ihn funktioniert GCS weiterhin über man
 
 ## Funktionsweise
 
-1. Der Connector läuft als eigenständiger Prozess (Daemon) neben evcc und pollt in einem konfigurierbaren Takt (`sync_interval_minutes`) die evcc-API nach neuen, abgeschlossenen Ladesessions.
+1. Der Connector läuft als eigenständiger Prozess (Daemon) neben evcc und pollt in einem konfigurierbaren Takt (`sync_interval_minutes`, Default 60 Minuten) die evcc-API nach neuen, abgeschlossenen Ladesessions. Optional lässt sich zusätzlich ein Webhook aktivieren, über den evcc einen Sync-Durchlauf sofort nach Ladeende anstößt, statt auf den nächsten Takt zu warten (siehe [Sofort-Sync per evcc-Webhook](#sofort-sync-per-evcc-webhook)).
 2. Jede neue Session wird auf das GCS-Payload-Format gemappt und einzeln per `POST` an die GCS-Connector-API gesendet (authentifiziert über API-Key/Secret).
 3. evcc's Feld `solarPercentage` wird als `clean_percentage` übertragen. **Preis- und CO₂-Daten aus evcc werden nie an GCS weitergegeben** — sie verlassen den Connector nicht (GCS ist explizit keine Bezahlplattform).
 4. Bereits gesendete Sessions werden lokal in einer `state.json` vermerkt (Watermark), damit nichts doppelt gesendet wird — GCS erkennt Duplikate serverseitig zusätzlich ab.
@@ -113,11 +113,13 @@ Wird der Connector ohne vorhandene Config gestartet, weist er auf `gcs-connector
 | `api_key` | ja | Connector-API-Key (aus dem GCS-Profil, „Connector/API-Zugang“) |
 | `api_secret` | ja | Zugehöriges Secret |
 | `site_name` | ja | Bezeichnung dieser Connector-Instanz, wird bei jeder Ladung mitgeschickt |
-| `sync_interval_minutes` | ja | Sync-Takt in Minuten |
+| `sync_interval_minutes` | nein | Sync-Takt in Minuten. Default: `60` |
 | `ignore_vehicles` | nein | Kommagetrennte Liste von evcc-Fahrzeugnamen, die nicht synchronisiert werden sollen |
 | `ignore_loadpoints` | nein | Kommagetrennte Liste von evcc-Ladepunktnamen, die nicht synchronisiert werden sollen |
 | `debug` | nein | `true`/`false` — ausführliches Logging inkl. HTTP-Request-Details |
 | `log_file` | nein | Pfad zur Log-Datei; leer = Ausgabe auf stdout |
+| `webhook_port` | nein | Aktiviert den Webhook-Listener (siehe [Sofort-Sync per evcc-Webhook](#sofort-sync-per-evcc-webhook)) auf diesem Port; leer = deaktiviert |
+| `webhook_secret` | nur mit `webhook_port` | Bearer-Token, das der Webhook-Aufruf mitschicken muss |
 
 Der Pfad zur `.env`-Datei lässt sich statt des Default-Arbeitsverzeichnisses auch über `--config <pfad>` oder die Umgebungsvariable `GCS_CONNECTOR_CONFIG` festlegen.
 
@@ -147,7 +149,50 @@ gcs-connector --config /pfad/zu/anderer.env
 
 Der Connector bringt seine eigene Ablauf-Schleife mit (kein externer Cron-Job nötig) — für den Dauerbetrieb empfiehlt sich trotzdem eine Prozess-Überwachung, die ihn bei einem Absturz oder Neustart des Rechners automatisch wieder hochfährt (z. B. ein systemd-Service unter Linux oder die Docker-Variante mit `--restart unless-stopped`).
 
-## Entwicklung
+### Sofort-Sync per evcc-Webhook
+
+Ohne weitere Konfiguration wartet eine gerade abgeschlossene Ladesession bis zu `sync_interval_minutes` (Default 60), bevor sie zu GCS übertragen wird. Wer es eiliger hat, kann evcc per [Messaging](https://docs.evcc.io/docs/reference/configuration/messaging/) so einrichten, dass es beim `stop`-Event (Ladevorgang beendet) einen Webhook auf dem Connector aufruft, der sofort einen Sync-Durchlauf anstößt — der reguläre `sync_interval_minutes`-Takt läuft parallel als Fallback weiter, falls der Webhook mal nicht ankommt.
+
+Der Webhook triggert dabei nur einen normalen Sync-Durchlauf (der Connector fragt wie gewohnt die evcc-Session-API ab); er überträgt selbst keine Ladedaten. Damit bleiben Watermark (`state.json`), Duplikat-Erkennung und Retry-Verhalten unverändert erhalten.
+
+**1. Webhook im Connector aktivieren** — in der `.env`:
+
+```
+webhook_port="8080"
+webhook_secret="ein-langes-zufälliges-secret"
+```
+
+Der Connector öffnet dann `POST http://<connector-host>:8080/sync`, das mit einem Bearer-Token (`webhook_secret`) abgesichert ist. Bei Docker/Docker Compose muss der Port zusätzlich veröffentlicht werden, z. B. `-p 8080:8080` bzw. im Compose-Service:
+
+```yaml
+services:
+  gcs-connector:
+    # ...
+    ports:
+      - "8080:8080"
+```
+
+**2. evcc für den `stop`-Event einen HTTP-Aufruf konfigurieren** — in der `evcc.yaml`:
+
+```yaml
+messaging:
+  events:
+    stop:
+      title: ""
+      msg: ""
+  services:
+    - type: custom
+      encoding: none
+      send:
+        source: http
+        uri: http://<connector-host>:8080/sync
+        method: POST
+        headers:
+          Authorization: "Bearer ein-langes-zufälliges-secret"
+        body: "{{.send}}"
+```
+
+`title`/`msg` können leer bleiben, da der Connector den Request-Body nicht auswertet — er reicht als reines "jetzt syncen"-Signal. Läuft evcc selbst per Docker Compose, `<connector-host>` entsprechend auf den Servicenamen des Connector-Containers setzen (analog zu `evcc_base_url` oben).
 
 ```bash
 go build ./...

@@ -51,6 +51,11 @@ type Runner struct {
 	IsFatal func(error) bool
 	// OnError is called for every non-fatal RunCycle error. Optional.
 	OnError func(error)
+	// Trigger, if set, lets external code (e.g. the optional webhook
+	// listener) request an out-of-band cycle immediately, without waiting
+	// for the next tick. A nil Trigger simply never fires, so leaving it
+	// unset keeps the interval-only behavior.
+	Trigger <-chan struct{}
 }
 
 // Run blocks until ctx is canceled (returns nil) or RunCycle returns a fatal
@@ -75,6 +80,13 @@ func (r *Runner) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C():
+			if fatalErr, stop := r.runOnceAndClassify(ctx); stop {
+				return fatalErr
+			}
+			if ctx.Err() != nil {
+				return nil
+			}
+		case <-r.Trigger:
 			if fatalErr, stop := r.runOnceAndClassify(ctx); stop {
 				return fatalErr
 			}

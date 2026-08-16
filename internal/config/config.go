@@ -9,7 +9,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds the ten .env variables documented for the connector.
+// DefaultSyncIntervalMinutes is used when sync_interval_minutes is left
+// unset in the .env file.
+const DefaultSyncIntervalMinutes = 60
+
+// Config holds the .env variables documented for the connector.
 type Config struct {
 	APIBaseURL          string
 	EVCCBaseURL         string
@@ -21,6 +25,9 @@ type Config struct {
 	IgnoreLoadpoints    []string
 	Debug               bool
 	LogFile             string
+	// WebhookPort is 0 when the webhook listener is disabled (the default).
+	WebhookPort   int
+	WebhookSecret string
 }
 
 var requiredFields = []string{
@@ -29,7 +36,6 @@ var requiredFields = []string{
 	"api_key",
 	"api_secret",
 	"site_name",
-	"sync_interval_minutes",
 }
 
 // Load reads and validates the .env file at path.
@@ -50,9 +56,26 @@ func FromMap(env map[string]string) (Config, error) {
 		}
 	}
 
-	interval, err := strconv.Atoi(env["sync_interval_minutes"])
-	if err != nil || interval <= 0 {
-		return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %q", env["sync_interval_minutes"])
+	interval := DefaultSyncIntervalMinutes
+	if raw := strings.TrimSpace(env["sync_interval_minutes"]); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v <= 0 {
+			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %q", raw)
+		}
+		interval = v
+	}
+
+	webhookPort := 0
+	if raw := strings.TrimSpace(env["webhook_port"]); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v <= 0 || v > 65535 {
+			return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %q", raw)
+		}
+		webhookPort = v
+	}
+	webhookSecret := env["webhook_secret"]
+	if webhookPort != 0 && strings.TrimSpace(webhookSecret) == "" {
+		return Config{}, fmt.Errorf("config: webhook_secret is required when webhook_port is set")
 	}
 
 	return Config{
@@ -66,6 +89,8 @@ func FromMap(env map[string]string) (Config, error) {
 		IgnoreLoadpoints:    splitList(env["ignore_loadpoints"]),
 		Debug:               strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
 		LogFile:             env["log_file"],
+		WebhookPort:         webhookPort,
+		WebhookSecret:       webhookSecret,
 	}, nil
 }
 

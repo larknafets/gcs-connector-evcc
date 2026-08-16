@@ -16,7 +16,7 @@ import (
 	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
 
-// Answers holds the raw string form of the ten .env variables, as collected
+// Answers holds the raw string form of the .env variables, as collected
 // from wizard prompts (before config.FromMap parses/validates them).
 type Answers struct {
 	APIBaseURL          string
@@ -29,14 +29,18 @@ type Answers struct {
 	IgnoreLoadpoints    string
 	Debug               string
 	LogFile             string
+	WebhookPort         string
+	WebhookSecret       string
 }
 
 // DefaultAnswers returns Answers with sensible defaults pre-filled for the
-// fields the wizard lets a user skip with Enter: debug, log_file, and the
-// two ignore lists. Required fields are left empty.
+// fields the wizard lets a user skip with Enter: debug, sync_interval_minutes,
+// log_file, the two ignore lists, and the two webhook fields. Required
+// fields with no sensible default are left empty.
 func DefaultAnswers() Answers {
 	return Answers{
-		Debug: "false",
+		Debug:               "false",
+		SyncIntervalMinutes: fmt.Sprintf("%d", config.DefaultSyncIntervalMinutes),
 	}
 }
 
@@ -59,7 +63,19 @@ func AnswersFromConfig(cfg config.Config) Answers {
 		IgnoreLoadpoints:    strings.Join(cfg.IgnoreLoadpoints, ", "),
 		Debug:               debug,
 		LogFile:             cfg.LogFile,
+		WebhookPort:         webhookPortString(cfg.WebhookPort),
+		WebhookSecret:       cfg.WebhookSecret,
 	}
+}
+
+// webhookPortString renders a Config.WebhookPort back into the wizard's
+// string form: 0 (disabled) becomes an empty field, matching how an unset
+// webhook_port is represented in the .env file.
+func webhookPortString(port int) string {
+	if port == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d", port)
 }
 
 // ConfirmOverwrite decides whether writing should proceed: always if no
@@ -85,6 +101,8 @@ var envFieldOrder = []struct {
 	{"ignore_loadpoints", func(a Answers) string { return a.IgnoreLoadpoints }},
 	{"debug", func(a Answers) string { return a.Debug }},
 	{"log_file", func(a Answers) string { return a.LogFile }},
+	{"webhook_port", func(a Answers) string { return a.WebhookPort }},
+	{"webhook_secret", func(a Answers) string { return a.WebhookSecret }},
 }
 
 // WriteEnvFile renders answers as a .env file at path, in the documented

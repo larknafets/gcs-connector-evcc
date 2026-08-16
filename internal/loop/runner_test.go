@@ -74,6 +74,63 @@ func TestRun_RunsAgainOnEachTick(t *testing.T) {
 	require.NoError(t, <-done)
 }
 
+func TestRun_TriggerChannelCausesImmediateOutOfBandCycle(t *testing.T) {
+	var calls int32
+	ticker := newFakeTicker()
+	trigger := make(chan struct{}, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &Runner{
+		Interval:  time.Hour,
+		NewTicker: func(time.Duration) Ticker { return ticker },
+		RunCycle: func(ctx context.Context) error {
+			atomic.AddInt32(&calls, 1)
+			return nil
+		},
+		IsFatal: func(error) bool { return false },
+		Trigger: trigger,
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- r.Run(ctx) }()
+
+	require.Eventually(t, func() bool { return atomic.LoadInt32(&calls) == 1 }, time.Second, time.Millisecond)
+
+	trigger <- struct{}{}
+	require.Eventually(t, func() bool { return atomic.LoadInt32(&calls) == 2 }, time.Second, time.Millisecond)
+
+	ticker.tick()
+	require.Eventually(t, func() bool { return atomic.LoadInt32(&calls) == 3 }, time.Second, time.Millisecond)
+
+	cancel()
+	require.NoError(t, <-done)
+}
+
+func TestRun_NilTriggerNeverFires(t *testing.T) {
+	var calls int32
+	ticker := newFakeTicker()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &Runner{
+		Interval:  time.Hour,
+		NewTicker: func(time.Duration) Ticker { return ticker },
+		RunCycle: func(ctx context.Context) error {
+			atomic.AddInt32(&calls, 1)
+			return nil
+		},
+		IsFatal: func(error) bool { return false },
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- r.Run(ctx) }()
+
+	require.Eventually(t, func() bool { return atomic.LoadInt32(&calls) == 1 }, time.Second, time.Millisecond)
+
+	cancel()
+	require.NoError(t, <-done)
+	assert.Equal(t, int32(1), atomic.LoadInt32(&calls))
+}
+
 func TestRun_FatalErrorStopsLoopAndIsReturned(t *testing.T) {
 	ticker := newFakeTicker()
 	ctx, cancel := context.WithCancel(context.Background())
