@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -102,15 +103,9 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	// The webhook listener binds before the daemon loop starts, so a port
 	// conflict fails startup immediately instead of surfacing later from a
 	// background goroutine.
-	var triggerCh chan struct{}
-	var webhookListener net.Listener
-	if cfg.WebhookPort != 0 {
-		triggerCh = make(chan struct{}, 1)
-		var err error
-		webhookListener, err = net.Listen("tcp", fmt.Sprintf(":%d", cfg.WebhookPort))
-		if err != nil {
-			return fmt.Errorf("webhook-Listener konnte nicht auf Port %d starten: %w", cfg.WebhookPort, err)
-		}
+	triggerCh, startWebhook, err := setupWebhookListener(cfg, logger)
+	if err != nil {
+		return err
 	}
 
 	runner := &loop.Runner{
@@ -133,15 +128,39 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	shutdownCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if webhookListener != nil {
-		whServer := &webhook.Server{Secret: cfg.WebhookSecret, Trigger: triggerCh, Logger: logger}
-		go func() {
-			if err := whServer.Serve(shutdownCtx, webhookListener); err != nil {
-				logger.Error("webhook-Listener beendet", "error", err)
-			}
-		}()
-		logger.Info("webhook-Listener gestartet, wartet auf Trigger-Requests", "port", cfg.WebhookPort)
+	if startWebhook != nil {
+		go startWebhook(shutdownCtx)
+		logger.Info("webhook-Listener gestartet, wartet auf Trigger-Requests", "port", cfg.Webhook.Port)
 	}
 
 	return runner.Run(shutdownCtx)
+}
+
+// setupWebhookListener binds the optional sync-now webhook listener
+// (internal/webhook) if cfg.Webhook.Port is set, so a port conflict is
+// reported synchronously here at startup rather than surfacing later from a
+// background goroutine. It returns the trigger channel to wire into
+// loop.Runner.Trigger and a start function that serves until ctx is
+// canceled; both are nil when the webhook is disabled (the default).
+func setupWebhookListener(cfg config.Config, logger *slog.Logger) (trigger chan struct{}, start func(ctx context.Context), err error) {
+	if cfg.Webhook.Port == 0 {
+		return nil, nil, nil
+	}
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Webhook.Port))
+	if err != nil {
+		return nil, nil, fmt.Errorf("webhook-Listener konnte nicht auf Port %d starten: %w", cfg.Webhook.Port, err)
+	}
+
+	trigger = make(chan struct{}, 1)
+	whServer := &webhook.Server{Secret: cfg.Webhook.Secret, Trigger: trigger, Logger: logger}
+	start = func(ctx context.Context) {
+		if err := whServer.Serve(ctx, ln); err != nil {
+			logger.Error("webhook-Listener beendet", "error", err)
+		}
+	}
+	return trigger, start, nil
 }

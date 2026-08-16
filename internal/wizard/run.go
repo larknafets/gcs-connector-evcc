@@ -40,21 +40,14 @@ func RunInit(ctx context.Context, configPath string) error {
 		}
 	}
 
-	form := huh.NewForm(huh.NewGroup(
+	// api_base_url/evcc_base_url are asked and reachability-checked first,
+	// before any credentials - so a typo surfaces immediately instead of
+	// only after api_key/api_secret were already typed in.
+	urlsForm := huh.NewForm(huh.NewGroup(
 		huh.NewInput().Title("api_base_url").Description("Adresse der GCS-Instanz").Value(&answers.APIBaseURL),
 		huh.NewInput().Title("evcc_base_url").Description("Adresse der lokalen evcc-Instanz").Value(&answers.EVCCBaseURL),
-		huh.NewInput().Title("api_key").Value(&answers.APIKey),
-		huh.NewInput().Title("api_secret").Password(true).Value(&answers.APISecret),
-		huh.NewInput().Title("site_name").Value(&answers.SiteName),
-		huh.NewInput().Title("sync_interval_minutes").Description("Default: 60").Value(&answers.SyncIntervalMinutes),
-		huh.NewInput().Title("ignore_vehicles").Description("kommagetrennt, optional").Value(&answers.IgnoreVehicles),
-		huh.NewInput().Title("ignore_loadpoints").Description("kommagetrennt, optional").Value(&answers.IgnoreLoadpoints),
-		huh.NewInput().Title("debug").Description("true/false").Value(&answers.Debug),
-		huh.NewInput().Title("log_file").Description("leer = stdout").Value(&answers.LogFile),
-		huh.NewInput().Title("webhook_port").Description("optional, aktiviert den Webhook-Listener (siehe README)").Value(&answers.WebhookPort),
-		huh.NewInput().Title("webhook_secret").Description("erforderlich, wenn webhook_port gesetzt ist").Password(true).Value(&answers.WebhookSecret),
 	))
-	if err := form.Run(); err != nil {
+	if err := urlsForm.Run(); err != nil {
 		return fmt.Errorf("wizard: %w", err)
 	}
 
@@ -77,6 +70,22 @@ func RunInit(ctx context.Context, configPath string) error {
 				return ErrAborted
 			}
 		}
+	}
+
+	remainingForm := huh.NewForm(huh.NewGroup(
+		huh.NewInput().Title("api_key").Value(&answers.APIKey),
+		huh.NewInput().Title("api_secret").Password(true).Value(&answers.APISecret),
+		huh.NewInput().Title("site_name").Value(&answers.SiteName),
+		huh.NewInput().Title("sync_interval_minutes").Description("Default: 60").Value(&answers.SyncIntervalMinutes),
+		huh.NewInput().Title("ignore_vehicles").Description("kommagetrennt, optional").Value(&answers.IgnoreVehicles),
+		huh.NewInput().Title("ignore_loadpoints").Description("kommagetrennt, optional").Value(&answers.IgnoreLoadpoints),
+		huh.NewInput().Title("debug").Description("true/false").Value(&answers.Debug),
+		huh.NewInput().Title("log_file").Description("leer = stdout").Value(&answers.LogFile),
+		huh.NewInput().Title("webhook_port").Description("optional, aktiviert den Webhook-Listener (siehe README)").Value(&answers.WebhookPort),
+		huh.NewInput().Title("webhook_secret").Description("erforderlich, wenn webhook_port gesetzt ist").Password(true).Value(&answers.WebhookSecret),
+	))
+	if err := remainingForm.Run(); err != nil {
+		return fmt.Errorf("wizard: %w", err)
 	}
 
 	return WriteEnvFile(configPath, answers)

@@ -13,6 +13,13 @@ import (
 // unset in the .env file.
 const DefaultSyncIntervalMinutes = 60
 
+// WebhookConfig groups the fields needed to run the optional sync-now
+// webhook listener. Port == 0 means the listener is disabled (the default).
+type WebhookConfig struct {
+	Port   int
+	Secret string
+}
+
 // Config holds the .env variables documented for the connector.
 type Config struct {
 	APIBaseURL          string
@@ -25,9 +32,7 @@ type Config struct {
 	IgnoreLoadpoints    []string
 	Debug               bool
 	LogFile             string
-	// WebhookPort is 0 when the webhook listener is disabled (the default).
-	WebhookPort   int
-	WebhookSecret string
+	Webhook             WebhookConfig
 }
 
 var requiredFields = []string{
@@ -57,24 +62,22 @@ func FromMap(env map[string]string) (Config, error) {
 	}
 
 	interval := DefaultSyncIntervalMinutes
-	if raw := strings.TrimSpace(env["sync_interval_minutes"]); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v <= 0 {
-			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %q", raw)
+	if v, present, convErr := parseOptionalInt(env["sync_interval_minutes"]); present {
+		if convErr != nil || v <= 0 {
+			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %q", env["sync_interval_minutes"])
 		}
 		interval = v
 	}
 
 	webhookPort := 0
-	if raw := strings.TrimSpace(env["webhook_port"]); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v <= 0 || v > 65535 {
-			return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %q", raw)
+	if v, present, convErr := parseOptionalInt(env["webhook_port"]); present {
+		if convErr != nil || v <= 0 || v > 65535 {
+			return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %q", env["webhook_port"])
 		}
 		webhookPort = v
 	}
-	webhookSecret := env["webhook_secret"]
-	if webhookPort != 0 && strings.TrimSpace(webhookSecret) == "" {
+	webhookSecret := strings.TrimSpace(env["webhook_secret"])
+	if webhookPort != 0 && webhookSecret == "" {
 		return Config{}, fmt.Errorf("config: webhook_secret is required when webhook_port is set")
 	}
 
@@ -89,9 +92,23 @@ func FromMap(env map[string]string) (Config, error) {
 		IgnoreLoadpoints:    splitList(env["ignore_loadpoints"]),
 		Debug:               strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
 		LogFile:             env["log_file"],
-		WebhookPort:         webhookPort,
-		WebhookSecret:       webhookSecret,
+		Webhook:             WebhookConfig{Port: webhookPort, Secret: webhookSecret},
 	}, nil
+}
+
+// parseOptionalInt parses an optional integer .env value: present reports
+// whether raw was non-blank at all, so callers can tell "field left empty,
+// use my default" apart from "field set but not a valid integer" (err) -
+// both sync_interval_minutes and webhook_port are optional but need
+// different validation ranges and error messages, so the numeric-vs-blank
+// split is all this helper shares between them.
+func parseOptionalInt(raw string) (v int, present bool, err error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0, false, nil
+	}
+	v, err = strconv.Atoi(trimmed)
+	return v, true, err
 }
 
 // splitList parses a comma-separated config value into a trimmed slice,

@@ -297,6 +297,38 @@ func TestRunCycle_PartialFailure_WatermarkStopsAtFirstFailure(t *testing.T) {
 		"got watermark %s", st.LastSyncedFinishedAt)
 }
 
+func TestRunCycle_PartialFailure_RateLimitExhausted_WatermarkStopsAtFirstFailure(t *testing.T) {
+	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+	sessions := map[string][]fakeEVCCSession{
+		"8-2026": {
+			{ID: 1, Created: "2026-08-14T09:00:00Z", Finished: strPtr("2026-08-14T10:00:00Z"), Loadpoint: "Garage", Vehicle: "James", ChargedEnergy: 1.0},
+			{ID: 2, Created: "2026-08-14T11:00:00Z", Finished: strPtr("2026-08-14T12:00:00Z"), Loadpoint: "Garage", Vehicle: "James", ChargedEnergy: 2.0},
+			{ID: 3, Created: "2026-08-14T13:00:00Z", Finished: strPtr("2026-08-14T14:00:00Z"), Loadpoint: "Garage", Vehicle: "James", ChargedEnergy: 3.0},
+		},
+		"7-2026": {},
+	}
+	evccServer, _ := newFakeEVCC(t, sessions)
+	gcsServer, posts := newFakeGCS(t, fakeGCSBehavior{
+		statusBySessionID: map[string]int{"2": http.StatusTooManyRequests},
+	}, nil)
+
+	orch, store, _ := newTestOrchestrator(t, evccServer.URL, gcsServer.URL, now)
+	result, err := orch.RunCycle(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, result.Sent) // sessions 1 and 3
+	assert.Equal(t, 1, result.Failed)
+	assert.GreaterOrEqual(t, len(*posts), 3, "all three sessions must have been attempted (session 2 possibly retried)")
+
+	st, _, err := store.Load()
+	require.NoError(t, err)
+	// watermark must NOT advance past session 1's Finished, even though
+	// session 3 (after the failure) succeeded - otherwise session 2 would
+	// never be retried.
+	assert.True(t, st.LastSyncedFinishedAt.Equal(time.Date(2026, 8, 14, 10, 0, 0, 0, time.UTC)),
+		"got watermark %s", st.LastSyncedFinishedAt)
+}
+
 func TestRunCycle_Unauthorized_ReturnsFatalErrorAndStopsProcessing(t *testing.T) {
 	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
 	sessions := map[string][]fakeEVCCSession{

@@ -63,12 +63,12 @@ func AnswersFromConfig(cfg config.Config) Answers {
 		IgnoreLoadpoints:    strings.Join(cfg.IgnoreLoadpoints, ", "),
 		Debug:               debug,
 		LogFile:             cfg.LogFile,
-		WebhookPort:         webhookPortString(cfg.WebhookPort),
-		WebhookSecret:       cfg.WebhookSecret,
+		WebhookPort:         webhookPortString(cfg.Webhook.Port),
+		WebhookSecret:       cfg.Webhook.Secret,
 	}
 }
 
-// webhookPortString renders a Config.WebhookPort back into the wizard's
+// webhookPortString renders a Config.Webhook.Port back into the wizard's
 // string form: 0 (disabled) becomes an empty field, matching how an unset
 // webhook_port is represented in the .env file.
 func webhookPortString(port int) string {

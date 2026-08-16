@@ -32,8 +32,8 @@ func TestFromMap_ValidMinimalConfig(t *testing.T) {
 	assert.Empty(t, cfg.IgnoreLoadpoints)
 	assert.False(t, cfg.Debug)
 	assert.Equal(t, "", cfg.LogFile)
-	assert.Equal(t, 0, cfg.WebhookPort)
-	assert.Equal(t, "", cfg.WebhookSecret)
+	assert.Equal(t, 0, cfg.Webhook.Port)
+	assert.Equal(t, "", cfg.Webhook.Secret)
 }
 
 func TestFromMap_SyncIntervalDefaultsTo60WhenUnset(t *testing.T) {
@@ -61,8 +61,18 @@ func TestFromMap_WebhookFieldsParsed(t *testing.T) {
 
 	cfg, err := FromMap(env)
 	require.NoError(t, err)
-	assert.Equal(t, 8080, cfg.WebhookPort)
-	assert.Equal(t, "s3cr3t", cfg.WebhookSecret)
+	assert.Equal(t, 8080, cfg.Webhook.Port)
+	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
+}
+
+func TestFromMap_WebhookSecretIsTrimmed(t *testing.T) {
+	env := validEnv()
+	env["webhook_port"] = "8080"
+	env["webhook_secret"] = "  s3cr3t  \n"
+
+	cfg, err := FromMap(env)
+	require.NoError(t, err)
+	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
 }
 
 func TestFromMap_WebhookPortWithoutSecretFails(t *testing.T) {

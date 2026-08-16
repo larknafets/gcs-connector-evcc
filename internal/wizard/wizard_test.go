@@ -38,8 +38,7 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 		IgnoreLoadpoints:    []string{"Werkstatt"},
 		Debug:               true,
 		LogFile:             "/var/log/gcs.log",
-		WebhookPort:         8080,
-		WebhookSecret:       "s3cr3t",
+		Webhook:             config.WebhookConfig{Port: 8080, Secret: "s3cr3t"},
 	}
 
 	a := AnswersFromConfig(cfg)
@@ -58,7 +57,7 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 }
 
 func TestAnswersFromConfig_WebhookPortZeroBecomesEmptyString(t *testing.T) {
-	cfg := config.Config{WebhookPort: 0}
+	cfg := config.Config{Webhook: config.WebhookConfig{Port: 0}}
 	a := AnswersFromConfig(cfg)
 	assert.Equal(t, "", a.WebhookPort)
 }
@@ -107,8 +106,8 @@ func TestWriteEnvFile_RoundTripsWebhookFields(t *testing.T) {
 
 	cfg, err := config.Load(path)
 	require.NoError(t, err)
-	assert.Equal(t, 8080, cfg.WebhookPort)
-	assert.Equal(t, "s3cr3t", cfg.WebhookSecret)
+	assert.Equal(t, 8080, cfg.Webhook.Port)
+	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
 }
 
 func TestWriteEnvFile_EscapesBackslashesForWindowsPaths(t *testing.T) {
