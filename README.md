@@ -19,7 +19,7 @@ Der Connector ist **optional** — ohne ihn funktioniert GCS weiterhin über man
 
 ### Fertiges Binary (empfohlen)
 
-Binaries für Windows, macOS und Linux (jeweils amd64) sowie Raspberry Pi (ARMv6/ARMv7/aarch64) werden bei jedem Release automatisch gebaut und stehen unter [Releases](https://github.com/larknafets/gcs-connector-evcc/releases) zum Download bereit. Einfach das passende Archiv herunterladen, entpacken und die `gcs-connector`-Binary an einen Ort deiner Wahl legen.
+Binaries für Windows (amd64), macOS (amd64 und Apple Silicon/arm64) und Linux (amd64) sowie Raspberry Pi (ARMv6/ARMv7/aarch64) werden bei jedem Release automatisch gebaut und stehen unter [Releases](https://github.com/larknafets/gcs-connector-evcc/releases) zum Download bereit. Einfach das passende Archiv herunterladen, entpacken und die `gcs-connector`-Binary an einen Ort deiner Wahl legen.
 
 ### Docker
 
@@ -193,6 +193,8 @@ messaging:
 ```
 
 `title`/`msg` können leer bleiben, da der Connector den Request-Body nicht auswertet — er reicht als reines "jetzt syncen"-Signal. Läuft evcc selbst per Docker Compose, `<connector-host>` entsprechend auf den Servicenamen des Connector-Containers setzen (analog zu `evcc_base_url` oben).
+
+## Entwicklung
 
 ```bash
 go build ./...

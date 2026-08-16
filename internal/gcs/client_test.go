@@ -67,6 +67,26 @@ func TestPostCharge_SuccessSendsHeadersAndPayload(t *testing.T) {
 	assert.NotContains(t, gotBody, "co2PerKWh")
 }
 
+func TestPostCharge_EmptyVehicleNameIsSentNotOmitted(t *testing.T) {
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"status":"created"}`))
+	}))
+	defer server.Close()
+
+	payload := samplePayload()
+	payload.VehicleName = ""
+
+	client := fastRetryClient(t, server.URL)
+	_, err := client.PostCharge(context.Background(), payload)
+	require.NoError(t, err)
+
+	assert.Contains(t, gotBody, "vehicle_name")
+	assert.Equal(t, "", gotBody["vehicle_name"])
+}
+
 func TestPostCharge_DuplicateSkipped(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

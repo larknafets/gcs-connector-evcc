@@ -41,7 +41,7 @@ type ChargePayload struct {
 	EndAt                 time.Time `json:"end_at"`
 	ChargedEnergyWh       int       `json:"charged_energy_wh"`
 	CleanPercentage       *float64  `json:"clean_percentage,omitempty"`
-	VehicleName           string    `json:"vehicle_name,omitempty"`
+	VehicleName           string    `json:"vehicle_name"`
 	SiteName              string    `json:"site_name"`
 }
 
