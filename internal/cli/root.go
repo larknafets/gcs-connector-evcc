@@ -60,13 +60,9 @@ func Execute() error {
 // runMain loads the config and either runs one dry-run preview or starts
 // the daemon loop, depending on dryRun.
 func runMain(ctx context.Context, configPath string, dryRun bool) error {
-	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("keine Config unter %s gefunden - bitte zuerst \"gcs-connector init\" ausführen", configPath)
-	}
-
-	cfg, err := config.Load(configPath)
+	cfg, effectiveConfigPath, err := loadConfig(configPath, defaultSupervisorOptionsPath)
 	if err != nil {
-		return fmt.Errorf("ungültige Config unter %s: %w", configPath, err)
+		return err
 	}
 
 	logger, closeLogger, err := buildLogger(cfg)
@@ -84,7 +80,7 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	orch := &gcssync.Orchestrator{
 		EVCC:             evcc.NewClient(cfg.EVCCBaseURL),
 		GCS:              gcsClient,
-		Store:            state.NewStore(configPath),
+		Store:            state.NewStore(effectiveConfigPath),
 		SiteName:         cfg.SiteName,
 		IgnoreVehicles:   cfg.IgnoreVehicles,
 		IgnoreLoadpoints: cfg.IgnoreLoadpoints,
