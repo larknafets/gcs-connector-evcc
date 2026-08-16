@@ -1,6 +1,6 @@
 // Package gcs talks to the GCS Connector-API (POST/GET
 // /api/v1/connector/charges), authenticating via the X-API-Key/X-API-Secret
-// header pair documented in gc-platform's 03-api-endpunkte.md, Abschnitt A.
+// header pair documented in gcs-platform's 03-api-endpunkte.md, Abschnitt A.
 package gcs
 
 import (

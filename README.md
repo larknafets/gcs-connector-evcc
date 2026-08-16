@@ -1,6 +1,6 @@
 # gcs-connector-evcc
 
-Der **evcc-Connector** für [Green Charging Society (GCS)](https://github.com/larknafets/gc-platform) — ein Peer2Peer-Netzwerk zum kostenfreien Tausch von Ladestrom zwischen Wallbox-Besitzern.
+Der **evcc-Connector** für [Green Charging Society (GCS)](https://github.com/larknafets/gcs-platform) — ein Peer2Peer-Netzwerk zum kostenfreien Tausch von Ladestrom zwischen Wallbox-Besitzern.
 
 Wer bereits [evcc](https://evcc.io) zur Steuerung seiner Wallbox einsetzt, muss die geladenen kWh nicht manuell in GCS eintragen: Dieser Connector läuft lokal beim Gastgeber, liest abgeschlossene Ladesessions automatisch aus evcc aus und synchronisiert sie mit der GCS-Plattform.
 
