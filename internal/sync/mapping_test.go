@@ -32,8 +32,8 @@ func TestToChargePayload_MapsFieldsAndRoundsWh(t *testing.T) {
 	assert.Equal(t, created, payload.StartAt)
 	assert.Equal(t, finished, payload.EndAt)
 	assert.Equal(t, 7263, payload.ChargedEnergyWh) // 7.262842655... kWh rounds to 7263 Wh
-	require.NotNil(t, payload.CleanPercentage)
-	assert.InDelta(t, solar, *payload.CleanPercentage, 1e-9)
+	require.NotNil(t, payload.GreenPercentage)
+	assert.InDelta(t, solar, *payload.GreenPercentage, 1e-9)
 	assert.Equal(t, "James", payload.VehicleName)
 	assert.Equal(t, "Zuhause Carport", payload.SiteName)
 }
@@ -51,7 +51,7 @@ func TestToChargePayload_MissingSolarPercentageOmitted(t *testing.T) {
 
 	payload, err := ToChargePayload(session, "Zuhause Carport")
 	require.NoError(t, err)
-	assert.Nil(t, payload.CleanPercentage)
+	assert.Nil(t, payload.GreenPercentage)
 }
 
 func TestToChargePayload_RequiresFinishedSession(t *testing.T) {

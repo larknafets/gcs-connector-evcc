@@ -12,7 +12,7 @@ Der Connector ist **optional** — ohne ihn funktioniert GCS weiterhin über man
 
 1. Der Connector läuft als eigenständiger Prozess (Daemon) neben evcc und pollt in einem konfigurierbaren Takt (`sync_interval_minutes`, Default 60 Minuten) die evcc-API nach neuen, abgeschlossenen Ladesessions. Optional lässt sich zusätzlich ein Webhook aktivieren, über den evcc einen Sync-Durchlauf sofort nach Ladeende anstößt, statt auf den nächsten Takt zu warten (siehe [Sofort-Sync per evcc-Webhook](#sofort-sync-per-evcc-webhook)).
 2. Jede neue Session wird auf das GCS-Payload-Format gemappt und einzeln per `POST` an die GCS-Connector-API gesendet (authentifiziert über API-Key/Secret).
-3. evcc's Feld `solarPercentage` wird als `clean_percentage` übertragen. **Preis- und CO₂-Daten aus evcc werden nie an GCS weitergegeben** — sie verlassen den Connector nicht (GCS ist explizit keine Bezahlplattform).
+3. evcc's Feld `solarPercentage` wird als `green_percentage` übertragen. **Preis- und CO₂-Daten aus evcc werden nie an GCS weitergegeben** — sie verlassen den Connector nicht (GCS ist explizit keine Bezahlplattform).
 4. Bereits gesendete Sessions werden lokal in einer `state.json` vermerkt (Watermark), damit nichts doppelt gesendet wird — GCS erkennt Duplikate serverseitig zusätzlich ab.
 5. Bei Verbindungsproblemen (evcc oder GCS nicht erreichbar, Rate-Limit) wird nur gewarnt und beim nächsten Takt automatisch erneut versucht — kein Absturz, keine manuelle Eingriffe nötig.
 6. Fahrzeuge oder Ladepunkte lassen sich über `ignore_vehicles`/`ignore_loadpoints` von der Synchronisation ausschließen (z. B. ein privater Zweitwagen oder ein Nicht-EV-Ladepunkt).

@@ -22,7 +22,7 @@ func samplePayload() ChargePayload {
 		StartAt:               time.Date(2026, 8, 14, 17, 12, 33, 0, time.UTC),
 		EndAt:                 time.Date(2026, 8, 15, 8, 0, 3, 0, time.UTC),
 		ChargedEnergyWh:       7263,
-		CleanPercentage:       float64Ptr(99.94),
+		GreenPercentage:       float64Ptr(99.94),
 		VehicleName:           "James",
 		SiteName:              "Zuhause Carport",
 	}
@@ -62,6 +62,8 @@ func TestPostCharge_SuccessSendsHeadersAndPayload(t *testing.T) {
 	assert.Equal(t, "971", gotBody["external_session_id"])
 	assert.Equal(t, float64(7263), gotBody["charged_energy_wh"])
 	assert.Equal(t, "Zuhause Carport", gotBody["site_name"])
+	assert.InDelta(t, 99.94, gotBody["green_percentage"], 1e-9)
+	assert.NotContains(t, gotBody, "clean_percentage")
 	assert.NotContains(t, gotBody, "price")
 	assert.NotContains(t, gotBody, "pricePerKWh")
 	assert.NotContains(t, gotBody, "co2PerKWh")

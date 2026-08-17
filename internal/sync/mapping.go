@@ -25,7 +25,7 @@ func ToChargePayload(s evcc.Session, siteName string) (gcs.ChargePayload, error)
 		StartAt:               s.Created,
 		EndAt:                 *s.Finished,
 		ChargedEnergyWh:       int(math.Round(s.ChargedEnergy * 1000)),
-		CleanPercentage:       s.SolarPercentage,
+		GreenPercentage:       s.SolarPercentage,
 		VehicleName:           s.Vehicle,
 		SiteName:              siteName,
 	}, nil
