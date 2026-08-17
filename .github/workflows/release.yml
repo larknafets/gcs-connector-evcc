@@ -71,10 +71,10 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout gcs-hassio-addons
+      - name: Checkout gcs-ha-addons
         uses: actions/checkout@v4
         with:
-          repository: larknafets/gcs-hassio-addons
+          repository: larknafets/gcs-ha-addons
           token: ${{ secrets.HASSIO_DEPLOY_TOKEN }}
           path: ./hassio
 

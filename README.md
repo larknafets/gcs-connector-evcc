@@ -86,7 +86,7 @@ services:
 
 ### Home Assistant Add-on
 
-Wer evcc über Home Assistant betreibt, kann den Connector auch als Supervisor-Add-on installieren, konfiguriert über die native Home-Assistant-Options-UI statt einer `.env`-Datei — siehe [gcs-hassio-addons](https://github.com/larknafets/gcs-hassio-addons).
+Wer evcc über Home Assistant betreibt, kann den Connector auch als Supervisor-Add-on installieren, konfiguriert über die native Home-Assistant-Options-UI statt einer `.env`-Datei — siehe [gcs-ha-addons](https://github.com/larknafets/gcs-ha-addons).
 
 ### Aus dem Quellcode bauen
 
