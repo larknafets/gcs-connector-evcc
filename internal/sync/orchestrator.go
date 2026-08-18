@@ -119,10 +119,7 @@ func (o *Orchestrator) eligibleSessions(ctx context.Context, watermark time.Time
 		all = append(all, results[i]...)
 	}
 
-	eligible := FilterFinished(all)
-	eligible = FilterAfterWatermark(eligible, watermark)
-	eligible = FilterIgnored(eligible, o.IgnoreVehicles, o.IgnoreLoadpoints)
-	return SortByFinished(eligible), nil
+	return filterEligible(all, watermark, o.IgnoreVehicles, o.IgnoreLoadpoints), nil
 }
 
 // RunCycle performs one full sync: fetch from evcc, filter, map, send each

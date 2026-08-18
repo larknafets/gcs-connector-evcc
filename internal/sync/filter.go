@@ -8,8 +8,21 @@ import (
 	"github.com/larknafets/gcs-connector-evcc/internal/evcc"
 )
 
-// FilterFinished keeps only sessions that have completed (Finished != nil).
-func FilterFinished(sessions []evcc.Session) []evcc.Session {
+// filterEligible narrows sessions down to the ones a sync cycle should
+// consider sending: finished, after watermark, not on an ignore list, sorted
+// ascending by Finished. It owns the order internally - sortByFinished
+// dereferences Finished unconditionally, so it must run after finished-only
+// sessions have been isolated; the other two steps are order-independent
+// with respect to each other and to that constraint.
+func filterEligible(sessions []evcc.Session, watermark time.Time, ignoreVehicles, ignoreLoadpoints []string) []evcc.Session {
+	eligible := filterFinished(sessions)
+	eligible = filterAfterWatermark(eligible, watermark)
+	eligible = filterIgnored(eligible, ignoreVehicles, ignoreLoadpoints)
+	return sortByFinished(eligible)
+}
+
+// filterFinished keeps only sessions that have completed (Finished != nil).
+func filterFinished(sessions []evcc.Session) []evcc.Session {
 	result := make([]evcc.Session, 0, len(sessions))
 	for _, s := range sessions {
 		if s.Finished != nil {
@@ -19,10 +32,11 @@ func FilterFinished(sessions []evcc.Session) []evcc.Session {
 	return result
 }
 
-// FilterAfterWatermark keeps only sessions whose Finished timestamp is
+// filterAfterWatermark keeps only sessions whose Finished timestamp is
 // strictly after watermark. Sessions without a Finished timestamp are
-// dropped; call FilterFinished first if that matters to the caller.
-func FilterAfterWatermark(sessions []evcc.Session, watermark time.Time) []evcc.Session {
+// dropped too, but callers should not rely on that - it's a side effect of
+// the nil-guard here, not this function's job.
+func filterAfterWatermark(sessions []evcc.Session, watermark time.Time) []evcc.Session {
 	result := make([]evcc.Session, 0, len(sessions))
 	for _, s := range sessions {
 		if s.Finished != nil && s.Finished.After(watermark) {
@@ -32,9 +46,9 @@ func FilterAfterWatermark(sessions []evcc.Session, watermark time.Time) []evcc.S
 	return result
 }
 
-// FilterIgnored drops sessions whose Vehicle or Loadpoint matches one of the
+// filterIgnored drops sessions whose Vehicle or Loadpoint matches one of the
 // configured ignore lists, exactly and case-insensitively.
-func FilterIgnored(sessions []evcc.Session, ignoreVehicles, ignoreLoadpoints []string) []evcc.Session {
+func filterIgnored(sessions []evcc.Session, ignoreVehicles, ignoreLoadpoints []string) []evcc.Session {
 	vehicles := toLowerSet(ignoreVehicles)
 	loadpoints := toLowerSet(ignoreLoadpoints)
 
@@ -48,9 +62,9 @@ func FilterIgnored(sessions []evcc.Session, ignoreVehicles, ignoreLoadpoints []s
 	return result
 }
 
-// SortByFinished returns sessions sorted ascending by Finished timestamp.
+// sortByFinished returns sessions sorted ascending by Finished timestamp.
 // Callers must filter out sessions with a nil Finished first.
-func SortByFinished(sessions []evcc.Session) []evcc.Session {
+func sortByFinished(sessions []evcc.Session) []evcc.Session {
 	result := make([]evcc.Session, len(sessions))
 	copy(result, sessions)
 	sort.Slice(result, func(i, j int) bool {
