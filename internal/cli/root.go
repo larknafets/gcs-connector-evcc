@@ -71,11 +71,7 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	}
 	defer closeLogger()
 
-	gcsClient := gcs.NewClient(cfg.APIBaseURL, cfg.APIKey, cfg.APISecret)
-	// *slog.Logger satisfies retryablehttp.LeveledLogger, so debug=true
-	// (which lowers logger's level to Debug) also surfaces retryablehttp's
-	// own per-attempt request logs, including retries.
-	gcsClient.HTTP.Logger = logger
+	gcsClient := gcs.NewClient(cfg.APIBaseURL, cfg.APIKey, cfg.APISecret, logger)
 
 	orch := &gcssync.Orchestrator{
 		EVCC:             evcc.NewClient(cfg.EVCCBaseURL),

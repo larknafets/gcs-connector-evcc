@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -66,10 +67,23 @@ type Client struct {
 	HTTP      *retryablehttp.Client
 }
 
-// NewClient returns a Client for the GCS instance at baseURL.
-func NewClient(baseURL, apiKey, apiSecret string) *Client {
+// NewClient returns a Client for the GCS instance at baseURL. logger may be
+// nil, in which case retry attempts go unlogged; *slog.Logger satisfies
+// retryablehttp.LeveledLogger, so a debug-level logger also surfaces
+// retryablehttp's own per-attempt request logs, including retries.
+func NewClient(baseURL, apiKey, apiSecret string, logger *slog.Logger) *Client {
 	retryClient := retryablehttp.NewClient()
-	retryClient.Logger = nil // logging is the caller's responsibility (slog)
+	// retryClient.Logger is interface{} and retryablehttp.NewClient defaults
+	// it to a log.Logger writing to stderr. Assigning a nil *slog.Logger to
+	// it directly would produce a non-nil interface wrapping a nil pointer
+	// (retryablehttp's own `c.Logger == nil` check wouldn't catch that), so
+	// guard explicitly and fall back to a true nil interface - "don't log" -
+	// rather than that default.
+	if logger != nil {
+		retryClient.Logger = logger
+	} else {
+		retryClient.Logger = nil
+	}
 	retryClient.RetryMax = 4
 	retryClient.RetryWaitMin = 1 * time.Second
 	retryClient.RetryWaitMax = 30 * time.Second

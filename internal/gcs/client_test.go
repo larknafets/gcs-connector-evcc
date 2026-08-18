@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,11 +32,30 @@ func samplePayload() ChargePayload {
 
 func fastRetryClient(t *testing.T, baseURL string) *Client {
 	t.Helper()
-	c := NewClient(baseURL, "key123", "secret456")
+	c := NewClient(baseURL, "key123", "secret456", nil)
 	c.HTTP.RetryMax = 1
 	c.HTTP.RetryWaitMin = time.Millisecond
 	c.HTTP.RetryWaitMax = 2 * time.Millisecond
 	return c
+}
+
+func TestNewClient_WiresLoggerIntoRetryClient(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	c := NewClient("http://example.invalid", "key", "secret", logger)
+	assert.Same(t, logger, c.HTTP.Logger)
+}
+
+func TestNewClient_NilLoggerDoesNotPanicOnUse(t *testing.T) {
+	// A naive `retryClient.Logger = logger` would store a non-nil interface
+	// wrapping a nil *slog.Logger, which retryablehttp would later try to
+	// call methods on. Exercise a real (failing, to force a log attempt)
+	// request to prove that doesn't happen.
+	c := NewClient("http://127.0.0.1:1", "key", "secret", nil)
+	c.HTTP.RetryMax = 0
+
+	assert.NotPanics(t, func() {
+		_, _ = c.PostCharge(context.Background(), samplePayload())
+	})
 }
 
 func TestPostCharge_SuccessSendsHeadersAndPayload(t *testing.T) {
