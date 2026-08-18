@@ -18,13 +18,30 @@ import (
 // this with errors.Is to decide whether to exit the process.
 var ErrFatal = errors.New("sync: fatal error")
 
+// sessionSource fetches evcc sessions for one calendar month. *evcc.Client
+// is the production adapter; tests use an in-memory fake so Orchestrator's
+// own branching logic can be exercised without a real HTTP round-trip -
+// *evcc.Client's HTTP behavior has its own coverage in internal/evcc.
+type sessionSource interface {
+	FetchSessions(ctx context.Context, month, year int) ([]evcc.Session, error)
+}
+
+// sessionSink sends charges to GCS and reports what it already has.
+// *gcs.Client is the production adapter; tests use an in-memory fake for the
+// same reason as sessionSource - *gcs.Client's HTTP-status-to-error mapping
+// has its own coverage in internal/gcs.
+type sessionSink interface {
+	PostCharge(ctx context.Context, payload gcs.ChargePayload) (duplicateSkipped bool, err error)
+	GetChargesSince(ctx context.Context, since time.Time) ([]gcs.ExistingCharge, error)
+}
+
 // Orchestrator wires the evcc client, GCS client and local state together
-// into a single sync cycle. It is the primary end-to-end test seam: tests
-// construct one against two httptest doubles and assert on what the fake
-// GCS server received plus the resulting state.json.
+// into a single sync cycle. It is the primary test seam: tests construct one
+// against in-memory sessionSource/sessionSink fakes and assert on what was
+// recorded plus the resulting state.json.
 type Orchestrator struct {
-	EVCC             *evcc.Client
-	GCS              *gcs.Client
+	EVCC             sessionSource
+	GCS              sessionSink
 	Store            *state.Store
 	SiteName         string
 	IgnoreVehicles   []string
