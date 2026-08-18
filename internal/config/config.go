@@ -37,12 +37,27 @@ type Config struct {
 	Webhook             WebhookConfig
 }
 
-var requiredFields = []string{
-	"api_base_url",
-	"evcc_base_url",
-	"api_key",
-	"api_secret",
-	"site_name",
+// rawFields is the intermediate representation both FromMap and
+// FromOptionsJSON produce before handing off to validate, which owns every
+// rule shared between the two sources. Each adapter does only its own
+// format-specific coercion (env-string parsing vs. JSON typing); everything
+// here is already the right Go type. SyncIntervalMinutes and WebhookPort are
+// pointers so validate can tell "explicitly set" apart from "left unset" -
+// each adapter decides for itself what "explicitly set" means for its own
+// source (see the doc comments on FromMap and FromOptionsJSON).
+type rawFields struct {
+	APIBaseURL          string
+	EVCCBaseURL         string
+	APIKey              string
+	APISecret           string
+	SiteName            string
+	SyncIntervalMinutes *int
+	WebhookPort         *int
+	WebhookSecret       string
+	IgnoreVehicles      []string
+	IgnoreLoadpoints    []string
+	Debug               bool
+	LogFile             string
 }
 
 // Load reads and validates the .env file at path.
@@ -55,47 +70,38 @@ func Load(path string) (Config, error) {
 }
 
 // FromMap validates and parses a raw key/value map (as produced by godotenv)
-// into a Config.
+// into a Config. A field counts as "explicitly set" whenever its raw string
+// is non-blank - so an explicit "0" for sync_interval_minutes or
+// webhook_port is a validation error, not silently treated as unset.
 func FromMap(env map[string]string) (Config, error) {
-	for _, field := range requiredFields {
-		if strings.TrimSpace(env[field]) == "" {
-			return Config{}, fmt.Errorf("config: missing required field %q", field)
-		}
+	raw := rawFields{
+		APIBaseURL:       env["api_base_url"],
+		EVCCBaseURL:      env["evcc_base_url"],
+		APIKey:           env["api_key"],
+		APISecret:        env["api_secret"],
+		SiteName:         env["site_name"],
+		IgnoreVehicles:   splitList(env["ignore_vehicles"]),
+		IgnoreLoadpoints: splitList(env["ignore_loadpoints"]),
+		Debug:            strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
+		LogFile:          env["log_file"],
+		WebhookSecret:    strings.TrimSpace(env["webhook_secret"]),
 	}
 
-	interval := DefaultSyncIntervalMinutes
 	if v, present, convErr := parseOptionalInt(env["sync_interval_minutes"]); present {
-		if convErr != nil || v <= 0 {
+		if convErr != nil {
 			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %q", env["sync_interval_minutes"])
 		}
-		interval = v
+		raw.SyncIntervalMinutes = &v
 	}
 
-	webhookPort := 0
 	if v, present, convErr := parseOptionalInt(env["webhook_port"]); present {
-		if convErr != nil || v <= 0 || v > 65535 {
+		if convErr != nil {
 			return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %q", env["webhook_port"])
 		}
-		webhookPort = v
-	}
-	webhookSecret := strings.TrimSpace(env["webhook_secret"])
-	if err := requireWebhookSecretIfPortSet(webhookPort, webhookSecret); err != nil {
-		return Config{}, err
+		raw.WebhookPort = &v
 	}
 
-	return Config{
-		APIBaseURL:          env["api_base_url"],
-		EVCCBaseURL:         env["evcc_base_url"],
-		APIKey:              env["api_key"],
-		APISecret:           env["api_secret"],
-		SiteName:            env["site_name"],
-		SyncIntervalMinutes: interval,
-		IgnoreVehicles:      splitList(env["ignore_vehicles"]),
-		IgnoreLoadpoints:    splitList(env["ignore_loadpoints"]),
-		Debug:               strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
-		LogFile:             env["log_file"],
-		Webhook:             WebhookConfig{Port: webhookPort, Secret: webhookSecret},
-	}, nil
+	return validate(raw)
 }
 
 // optionsJSON is the shape of a Home Assistant Supervisor add-on's
@@ -121,33 +127,61 @@ type optionsJSON struct {
 
 // FromOptionsJSON reads and validates a Home Assistant Supervisor
 // options.json file into a Config, applying the same validation rules as
-// FromMap/Load. A JSON field absent from options.json unmarshals to Go's
-// zero value (0 for webhook_port), which already means "disabled" - the
-// same default FromMap uses - so unlike FromMap's .env parsing there is no
-// separate "field present but blank" case to detect here. The port range
-// is still checked explicitly: the add-on's options schema constrains it
-// too, but that's an external file this package can't see or trust as the
-// only guard against a malformed or hand-edited options.json.
+// FromMap/Load. Unlike FromMap's .env parsing, webhook_port has no separate
+// "explicitly set" case to preserve here: a JSON field absent from
+// options.json unmarshals to Go's zero value (0), which already means
+// "disabled" - the same default FromMap uses - so an explicit 0 in
+// options.json is indistinguishable from an absent field and is treated the
+// same way (see rawFields). sync_interval_minutes doesn't have this
+// limitation because optionsJSON declares it as *int.
 func FromOptionsJSON(path string) (Config, error) {
-	raw, err := os.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, fmt.Errorf("config: reading %s: %w", path, err)
 	}
 
 	var opts optionsJSON
-	if err := json.Unmarshal(raw, &opts); err != nil {
+	if err := json.Unmarshal(data, &opts); err != nil {
 		return Config{}, fmt.Errorf("config: parsing %s: %w", path, err)
 	}
 
+	raw := rawFields{
+		APIBaseURL:          opts.APIBaseURL,
+		EVCCBaseURL:         opts.EVCCBaseURL,
+		APIKey:              opts.APIKey,
+		APISecret:           opts.APISecret,
+		SiteName:            opts.SiteName,
+		SyncIntervalMinutes: opts.SyncIntervalMinutes,
+		IgnoreVehicles:      opts.IgnoreVehicles,
+		IgnoreLoadpoints:    opts.IgnoreLoadpoints,
+		Debug:               opts.Debug,
+		LogFile:             opts.LogFile,
+		WebhookSecret:       strings.TrimSpace(opts.WebhookSecret),
+	}
+	if opts.WebhookPort != 0 {
+		port := opts.WebhookPort
+		raw.WebhookPort = &port
+	}
+
+	return validate(raw)
+}
+
+// validate applies every config rule shared by FromMap and FromOptionsJSON:
+// required fields, the sync_interval_minutes and webhook_port ranges, and
+// the webhook_secret-requires-webhook_port rule. A nil SyncIntervalMinutes
+// or WebhookPort defaults to DefaultSyncIntervalMinutes / disabled without
+// triggering its range check; a non-nil pointer is always range-checked,
+// even if it points at zero or a negative value.
+func validate(raw rawFields) (Config, error) {
 	for _, field := range []struct {
 		name  string
 		value string
 	}{
-		{"api_base_url", opts.APIBaseURL},
-		{"evcc_base_url", opts.EVCCBaseURL},
-		{"api_key", opts.APIKey},
-		{"api_secret", opts.APISecret},
-		{"site_name", opts.SiteName},
+		{"api_base_url", raw.APIBaseURL},
+		{"evcc_base_url", raw.EVCCBaseURL},
+		{"api_key", raw.APIKey},
+		{"api_secret", raw.APISecret},
+		{"site_name", raw.SiteName},
 	} {
 		if strings.TrimSpace(field.value) == "" {
 			return Config{}, fmt.Errorf("config: missing required field %q", field.name)
@@ -155,33 +189,36 @@ func FromOptionsJSON(path string) (Config, error) {
 	}
 
 	interval := DefaultSyncIntervalMinutes
-	if opts.SyncIntervalMinutes != nil {
-		if *opts.SyncIntervalMinutes <= 0 {
-			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %d", *opts.SyncIntervalMinutes)
+	if raw.SyncIntervalMinutes != nil {
+		if *raw.SyncIntervalMinutes <= 0 {
+			return Config{}, fmt.Errorf("config: sync_interval_minutes must be a positive integer, got %d", *raw.SyncIntervalMinutes)
 		}
-		interval = *opts.SyncIntervalMinutes
+		interval = *raw.SyncIntervalMinutes
 	}
 
-	if opts.WebhookPort != 0 && (opts.WebhookPort < 1 || opts.WebhookPort > 65535) {
-		return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %d", opts.WebhookPort)
+	webhookPort := 0
+	if raw.WebhookPort != nil {
+		if *raw.WebhookPort < 1 || *raw.WebhookPort > 65535 {
+			return Config{}, fmt.Errorf("config: webhook_port must be a valid port number, got %d", *raw.WebhookPort)
+		}
+		webhookPort = *raw.WebhookPort
 	}
-	webhookSecret := strings.TrimSpace(opts.WebhookSecret)
-	if err := requireWebhookSecretIfPortSet(opts.WebhookPort, webhookSecret); err != nil {
+	if err := requireWebhookSecretIfPortSet(webhookPort, raw.WebhookSecret); err != nil {
 		return Config{}, err
 	}
 
 	return Config{
-		APIBaseURL:          opts.APIBaseURL,
-		EVCCBaseURL:         opts.EVCCBaseURL,
-		APIKey:              opts.APIKey,
-		APISecret:           opts.APISecret,
-		SiteName:            opts.SiteName,
+		APIBaseURL:          raw.APIBaseURL,
+		EVCCBaseURL:         raw.EVCCBaseURL,
+		APIKey:              raw.APIKey,
+		APISecret:           raw.APISecret,
+		SiteName:            raw.SiteName,
 		SyncIntervalMinutes: interval,
-		IgnoreVehicles:      opts.IgnoreVehicles,
-		IgnoreLoadpoints:    opts.IgnoreLoadpoints,
-		Debug:               opts.Debug,
-		LogFile:             opts.LogFile,
-		Webhook:             WebhookConfig{Port: opts.WebhookPort, Secret: webhookSecret},
+		IgnoreVehicles:      raw.IgnoreVehicles,
+		IgnoreLoadpoints:    raw.IgnoreLoadpoints,
+		Debug:               raw.Debug,
+		LogFile:             raw.LogFile,
+		Webhook:             WebhookConfig{Port: webhookPort, Secret: raw.WebhookSecret},
 	}, nil
 }
 
@@ -200,13 +237,9 @@ func parseOptionalInt(raw string) (v int, present bool, err error) {
 	return v, true, err
 }
 
-// splitList parses a comma-separated config value into a trimmed slice,
-// dropping empty entries.
 // requireWebhookSecretIfPortSet enforces the one webhook validation rule
-// that's identical (same condition, same message) across both FromMap and
-// FromOptionsJSON, so a future change to it only needs to happen once. port
-// and trimmedSecret must already be resolved to their final values - it
-// does no parsing or trimming itself.
+// that isn't a simple range check. port and trimmedSecret must already be
+// resolved to their final values - it does no parsing or trimming itself.
 func requireWebhookSecretIfPortSet(port int, trimmedSecret string) error {
 	if port != 0 && trimmedSecret == "" {
 		return fmt.Errorf("config: webhook_secret is required when webhook_port is set")
@@ -214,6 +247,8 @@ func requireWebhookSecretIfPortSet(port int, trimmedSecret string) error {
 	return nil
 }
 
+// splitList parses a comma-separated config value into a trimmed slice,
+// dropping empty entries.
 func splitList(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil

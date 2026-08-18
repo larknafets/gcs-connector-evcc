@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,19 +18,22 @@ func writeOptionsJSON(t *testing.T, raw string) string {
 	return path
 }
 
-func validEnv() map[string]string {
-	return map[string]string{
-		"api_base_url":          "https://gcs.example.com",
-		"evcc_base_url":         "http://192.168.1.50:7070",
-		"api_key":               "key123",
-		"api_secret":            "secret456",
-		"site_name":             "Zuhause Carport",
-		"sync_interval_minutes": "60",
+func validRawFields() rawFields {
+	return rawFields{
+		APIBaseURL:  "https://gcs.example.com",
+		EVCCBaseURL: "http://192.168.1.50:7070",
+		APIKey:      "key123",
+		APISecret:   "secret456",
+		SiteName:    "Zuhause Carport",
 	}
 }
 
-func TestFromMap_ValidMinimalConfig(t *testing.T) {
-	cfg, err := FromMap(validEnv())
+func intPtr(v int) *int { return &v }
+
+// --- validate: every rule shared by FromMap and FromOptionsJSON, tested once. ---
+
+func TestValidate_ValidMinimalConfig(t *testing.T) {
+	cfg, err := validate(validRawFields())
 	require.NoError(t, err)
 
 	assert.Equal(t, "https://gcs.example.com", cfg.APIBaseURL)
@@ -46,6 +48,122 @@ func TestFromMap_ValidMinimalConfig(t *testing.T) {
 	assert.Equal(t, "", cfg.LogFile)
 	assert.Equal(t, 0, cfg.Webhook.Port)
 	assert.Equal(t, "", cfg.Webhook.Secret)
+}
+
+func TestValidate_SyncIntervalDefaultsTo60WhenUnset(t *testing.T) {
+	cfg, err := validate(validRawFields())
+	require.NoError(t, err)
+	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
+}
+
+func TestValidate_SyncIntervalUsesExplicitValue(t *testing.T) {
+	raw := validRawFields()
+	raw.SyncIntervalMinutes = intPtr(30)
+
+	cfg, err := validate(raw)
+	require.NoError(t, err)
+	assert.Equal(t, 30, cfg.SyncIntervalMinutes)
+}
+
+func TestValidate_SyncIntervalMustBePositiveWhenSet(t *testing.T) {
+	for _, v := range []int{0, -5} {
+		t.Run(fmt.Sprintf("%d", v), func(t *testing.T) {
+			raw := validRawFields()
+			raw.SyncIntervalMinutes = intPtr(v)
+
+			_, err := validate(raw)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "sync_interval_minutes")
+		})
+	}
+}
+
+func TestValidate_WebhookFieldsParsed(t *testing.T) {
+	raw := validRawFields()
+	raw.WebhookPort = intPtr(8080)
+	raw.WebhookSecret = "s3cr3t"
+
+	cfg, err := validate(raw)
+	require.NoError(t, err)
+	assert.Equal(t, 8080, cfg.Webhook.Port)
+	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
+}
+
+func TestValidate_WebhookPortWithoutSecretFails(t *testing.T) {
+	raw := validRawFields()
+	raw.WebhookPort = intPtr(8080)
+
+	_, err := validate(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "webhook_secret")
+}
+
+func TestValidate_WebhookPortOutOfRangeWhenSet(t *testing.T) {
+	for _, v := range []int{0, -1, 65536, 100000} {
+		t.Run(fmt.Sprintf("%d", v), func(t *testing.T) {
+			raw := validRawFields()
+			raw.WebhookPort = intPtr(v)
+			raw.WebhookSecret = "s3cr3t"
+
+			_, err := validate(raw)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "webhook_port")
+		})
+	}
+}
+
+func TestValidate_OptionalFieldsParsed(t *testing.T) {
+	raw := validRawFields()
+	raw.IgnoreVehicles = []string{"James", "Kühlschrank Garage"}
+	raw.IgnoreLoadpoints = []string{"Werkstatt"}
+	raw.Debug = true
+	raw.LogFile = "/var/log/gcs-connector.log"
+
+	cfg, err := validate(raw)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
+	assert.True(t, cfg.Debug)
+	assert.Equal(t, "/var/log/gcs-connector.log", cfg.LogFile)
+}
+
+func TestValidate_MissingRequiredField(t *testing.T) {
+	for field, clear := range map[string]func(*rawFields){
+		"api_base_url":  func(r *rawFields) { r.APIBaseURL = "" },
+		"evcc_base_url": func(r *rawFields) { r.EVCCBaseURL = "" },
+		"api_key":       func(r *rawFields) { r.APIKey = "" },
+		"api_secret":    func(r *rawFields) { r.APISecret = "" },
+		"site_name":     func(r *rawFields) { r.SiteName = "" },
+	} {
+		t.Run(field, func(t *testing.T) {
+			raw := validRawFields()
+			clear(&raw)
+
+			_, err := validate(raw)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), field)
+		})
+	}
+}
+
+// --- FromMap: only what's specific to the .env/map source. ---
+
+func validEnv() map[string]string {
+	return map[string]string{
+		"api_base_url":          "https://gcs.example.com",
+		"evcc_base_url":         "http://192.168.1.50:7070",
+		"api_key":               "key123",
+		"api_secret":            "secret456",
+		"site_name":             "Zuhause Carport",
+		"sync_interval_minutes": "60",
+	}
+}
+
+func TestFromMap_ValidMinimalConfig(t *testing.T) {
+	cfg, err := FromMap(validEnv())
+	require.NoError(t, err)
+	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
 }
 
 func TestFromMap_SyncIntervalDefaultsTo60WhenUnset(t *testing.T) {
@@ -66,15 +184,25 @@ func TestFromMap_SyncIntervalDefaultsTo60WhenEmpty(t *testing.T) {
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
 }
 
-func TestFromMap_WebhookFieldsParsed(t *testing.T) {
+func TestFromMap_SyncIntervalExplicitZeroFails(t *testing.T) {
+	// Unlike FromOptionsJSON (see TestFromOptionsJSON_WebhookPortZeroStaysDisabledEvenWhenExplicit),
+	// .env can distinguish "field present" from "field absent" for every
+	// field, so an explicit "0" is a validation error, not a default.
 	env := validEnv()
-	env["webhook_port"] = "8080"
-	env["webhook_secret"] = "s3cr3t"
+	env["sync_interval_minutes"] = "0"
 
-	cfg, err := FromMap(env)
-	require.NoError(t, err)
-	assert.Equal(t, 8080, cfg.Webhook.Port)
-	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
+	_, err := FromMap(env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sync_interval_minutes")
+}
+
+func TestFromMap_SyncIntervalNotANumberFails(t *testing.T) {
+	env := validEnv()
+	env["sync_interval_minutes"] = "not-a-number"
+
+	_, err := FromMap(env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sync_interval_minutes")
 }
 
 func TestFromMap_WebhookSecretIsTrimmed(t *testing.T) {
@@ -87,31 +215,29 @@ func TestFromMap_WebhookSecretIsTrimmed(t *testing.T) {
 	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
 }
 
-func TestFromMap_WebhookPortWithoutSecretFails(t *testing.T) {
+func TestFromMap_WebhookPortExplicitZeroFails(t *testing.T) {
+	// Unlike FromOptionsJSON, an explicit "0" in .env is a validation error
+	// rather than a synonym for "disabled" - see rawFields.
 	env := validEnv()
-	env["webhook_port"] = "8080"
+	env["webhook_port"] = "0"
+	env["webhook_secret"] = "s3cr3t"
 
 	_, err := FromMap(env)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "webhook_secret")
+	assert.Contains(t, err.Error(), "webhook_port")
 }
 
-func TestFromMap_WebhookPortInvalid(t *testing.T) {
-	cases := []string{"0", "-1", "not-a-number", "70000"}
-	for _, v := range cases {
-		t.Run(v, func(t *testing.T) {
-			env := validEnv()
-			env["webhook_port"] = v
-			env["webhook_secret"] = "s3cr3t"
+func TestFromMap_WebhookPortNotANumberFails(t *testing.T) {
+	env := validEnv()
+	env["webhook_port"] = "not-a-number"
+	env["webhook_secret"] = "s3cr3t"
 
-			_, err := FromMap(env)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "webhook_port")
-		})
-	}
+	_, err := FromMap(env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "webhook_port")
 }
 
-func TestFromMap_OptionalFieldsParsed(t *testing.T) {
+func TestFromMap_OptionalFieldsCoerced(t *testing.T) {
 	env := validEnv()
 	env["ignore_vehicles"] = "James, Kühlschrank Garage"
 	env["ignore_loadpoints"] = "Werkstatt"
@@ -137,37 +263,24 @@ func TestFromMap_EmptyIgnoreListsStayEmpty(t *testing.T) {
 	assert.Empty(t, cfg.IgnoreVehicles)
 }
 
+// TestFromMap_MissingRequiredField proves the wiring from a missing env key
+// to validate's required-field check; the full 5-field rule is covered once,
+// at the rule level, by TestValidate_MissingRequiredField.
 func TestFromMap_MissingRequiredField(t *testing.T) {
-	for _, field := range []string{"api_base_url", "evcc_base_url", "api_key", "api_secret", "site_name"} {
-		t.Run(field, func(t *testing.T) {
-			env := validEnv()
-			delete(env, field)
+	env := validEnv()
+	delete(env, "site_name")
 
-			_, err := FromMap(env)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), field)
-		})
-	}
-}
-
-func TestFromMap_SyncIntervalMustBePositiveInteger(t *testing.T) {
-	cases := []string{"0", "-5", "not-a-number"}
-	for _, v := range cases {
-		t.Run(v, func(t *testing.T) {
-			env := validEnv()
-			env["sync_interval_minutes"] = v
-
-			_, err := FromMap(env)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "sync_interval_minutes")
-		})
-	}
+	_, err := FromMap(env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "site_name")
 }
 
 func TestLoad_MissingFile(t *testing.T) {
 	_, err := Load("/nonexistent/path/.env")
 	require.Error(t, err)
 }
+
+// --- FromOptionsJSON: only what's specific to the Supervisor options.json source. ---
 
 func TestFromOptionsJSON_ValidMinimalConfig(t *testing.T) {
 	path := writeOptionsJSON(t, `{
@@ -180,22 +293,10 @@ func TestFromOptionsJSON_ValidMinimalConfig(t *testing.T) {
 
 	cfg, err := FromOptionsJSON(path)
 	require.NoError(t, err)
-
-	assert.Equal(t, "https://gcs.example.com", cfg.APIBaseURL)
-	assert.Equal(t, "http://192.168.1.50:7070", cfg.EVCCBaseURL)
-	assert.Equal(t, "key123", cfg.APIKey)
-	assert.Equal(t, "secret456", cfg.APISecret)
-	assert.Equal(t, "Zuhause Carport", cfg.SiteName)
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes, "must default like FromMap when the field is absent")
-	assert.Empty(t, cfg.IgnoreVehicles)
-	assert.Empty(t, cfg.IgnoreLoadpoints)
-	assert.False(t, cfg.Debug)
-	assert.Equal(t, "", cfg.LogFile)
-	assert.Equal(t, 0, cfg.Webhook.Port)
-	assert.Equal(t, "", cfg.Webhook.Secret)
 }
 
-func TestFromOptionsJSON_IgnoreListsAreRealJSONArraysNotCommaSeparated(t *testing.T) {
+func TestFromOptionsJSON_OptionalFieldsCoerced(t *testing.T) {
 	path := writeOptionsJSON(t, `{
 		"api_base_url": "https://gcs.example.com",
 		"evcc_base_url": "http://192.168.1.50:7070",
@@ -203,23 +304,7 @@ func TestFromOptionsJSON_IgnoreListsAreRealJSONArraysNotCommaSeparated(t *testin
 		"api_secret": "secret456",
 		"site_name": "Zuhause Carport",
 		"ignore_vehicles": ["James", "Kühlschrank Garage"],
-		"ignore_loadpoints": ["Werkstatt"]
-	}`)
-
-	cfg, err := FromOptionsJSON(path)
-	require.NoError(t, err)
-	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
-	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
-}
-
-func TestFromOptionsJSON_OptionalFieldsParsed(t *testing.T) {
-	path := writeOptionsJSON(t, `{
-		"api_base_url": "https://gcs.example.com",
-		"evcc_base_url": "http://192.168.1.50:7070",
-		"api_key": "key123",
-		"api_secret": "secret456",
-		"site_name": "Zuhause Carport",
-		"sync_interval_minutes": 30,
+		"ignore_loadpoints": ["Werkstatt"],
 		"debug": true,
 		"log_file": "/var/log/gcs-connector.log",
 		"webhook_port": 8734,
@@ -228,41 +313,18 @@ func TestFromOptionsJSON_OptionalFieldsParsed(t *testing.T) {
 
 	cfg, err := FromOptionsJSON(path)
 	require.NoError(t, err)
-	assert.Equal(t, 30, cfg.SyncIntervalMinutes)
+	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
 	assert.True(t, cfg.Debug)
 	assert.Equal(t, "/var/log/gcs-connector.log", cfg.LogFile)
 	assert.Equal(t, 8734, cfg.Webhook.Port)
 	assert.Equal(t, "s3cr3t", cfg.Webhook.Secret)
 }
 
-func TestFromOptionsJSON_MissingRequiredField(t *testing.T) {
-	base := map[string]string{
-		"api_base_url":  "https://gcs.example.com",
-		"evcc_base_url": "http://192.168.1.50:7070",
-		"api_key":       "key123",
-		"api_secret":    "secret456",
-		"site_name":     "Zuhause Carport",
-	}
-	for _, field := range []string{"api_base_url", "evcc_base_url", "api_key", "api_secret", "site_name"} {
-		t.Run(field, func(t *testing.T) {
-			fields := map[string]string{}
-			for k, v := range base {
-				if k != field {
-					fields[k] = v
-				}
-			}
-			raw, err := json.Marshal(fields)
-			require.NoError(t, err)
-			path := writeOptionsJSON(t, string(raw))
-
-			_, err = FromOptionsJSON(path)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), field)
-		})
-	}
-}
-
-func TestFromOptionsJSON_SyncIntervalMustBePositiveWhenSet(t *testing.T) {
+func TestFromOptionsJSON_SyncIntervalExplicitZeroFails(t *testing.T) {
+	// sync_interval_minutes is *int in optionsJSON, so - unlike
+	// webhook_port below - explicit 0 is distinguishable from absent and is
+	// still a validation error.
 	path := writeOptionsJSON(t, `{
 		"api_base_url": "https://gcs.example.com",
 		"evcc_base_url": "http://192.168.1.50:7070",
@@ -275,44 +337,6 @@ func TestFromOptionsJSON_SyncIntervalMustBePositiveWhenSet(t *testing.T) {
 	_, err := FromOptionsJSON(path)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sync_interval_minutes")
-}
-
-func TestFromOptionsJSON_WebhookPortWithoutSecretFails(t *testing.T) {
-	path := writeOptionsJSON(t, `{
-		"api_base_url": "https://gcs.example.com",
-		"evcc_base_url": "http://192.168.1.50:7070",
-		"api_key": "key123",
-		"api_secret": "secret456",
-		"site_name": "Zuhause Carport",
-		"webhook_port": 8734
-	}`)
-
-	_, err := FromOptionsJSON(path)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "webhook_secret")
-}
-
-func TestFromOptionsJSON_WebhookPortOutOfRangeFails(t *testing.T) {
-	cases := []int{-1, 65536, 100000}
-	for _, port := range cases {
-		t.Run(fmt.Sprintf("%d", port), func(t *testing.T) {
-			raw, err := json.Marshal(map[string]any{
-				"api_base_url":   "https://gcs.example.com",
-				"evcc_base_url":  "http://192.168.1.50:7070",
-				"api_key":        "key123",
-				"api_secret":     "secret456",
-				"site_name":      "Zuhause Carport",
-				"webhook_port":   port,
-				"webhook_secret": "s3cr3t",
-			})
-			require.NoError(t, err)
-			path := writeOptionsJSON(t, string(raw))
-
-			_, err = FromOptionsJSON(path)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "webhook_port")
-		})
-	}
 }
 
 func TestFromOptionsJSON_WebhookPortZeroStaysDisabledEvenWhenExplicit(t *testing.T) {
@@ -333,6 +357,22 @@ func TestFromOptionsJSON_WebhookPortZeroStaysDisabledEvenWhenExplicit(t *testing
 	cfg, err := FromOptionsJSON(path)
 	require.NoError(t, err)
 	assert.Equal(t, 0, cfg.Webhook.Port)
+}
+
+// TestFromOptionsJSON_MissingRequiredField proves the wiring from a missing
+// JSON key to validate's required-field check; the full 5-field rule is
+// covered once, at the rule level, by TestValidate_MissingRequiredField.
+func TestFromOptionsJSON_MissingRequiredField(t *testing.T) {
+	path := writeOptionsJSON(t, `{
+		"api_base_url": "https://gcs.example.com",
+		"evcc_base_url": "http://192.168.1.50:7070",
+		"api_key": "key123",
+		"api_secret": "secret456"
+	}`)
+
+	_, err := FromOptionsJSON(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "site_name")
 }
 
 func TestFromOptionsJSON_FileNotFound(t *testing.T) {
