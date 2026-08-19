@@ -11,6 +11,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
     go build -trimpath -ldflags="-s -w" -o /out/gcs-connector ./cmd/gcs-connector
 
 FROM gcr.io/distroless/static-debian12:nonroot
+USER nonroot:nonroot
 WORKDIR /config
 COPY --from=builder /out/gcs-connector /gcs-connector
 ENTRYPOINT ["/gcs-connector"]
