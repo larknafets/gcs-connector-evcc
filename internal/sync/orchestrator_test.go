@@ -70,10 +70,10 @@ func newTestOrchestrator(t *testing.T, source *fakeSource, sink *fakeSink, now t
 	store := state.NewStore(configPath)
 
 	orch := &Orchestrator{
-		EVCC:     source,
-		GCS:      sink,
-		Store:    store,
-		Now:      func() time.Time { return now },
+		EVCC:  source,
+		GCS:   sink,
+		Store: store,
+		Now:   func() time.Time { return now },
 	}
 	return orch, store, configPath
 }
