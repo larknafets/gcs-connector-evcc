@@ -132,6 +132,6 @@ func CheckReachable(ctx context.Context, baseURL string) error {
 	if err != nil {
 		return fmt.Errorf("wizard: %s not reachable: %w", baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return nil
 }

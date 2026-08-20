@@ -106,10 +106,10 @@ func (s *Store) Save(state State) error {
 		return fmt.Errorf("state: creating temp file: %w", err)
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath) // no-op once the rename below succeeds
+	defer func() { _ = os.Remove(tmpPath) }() // no-op once the rename below succeeds
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("state: writing temp file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {

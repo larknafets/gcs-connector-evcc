@@ -24,7 +24,7 @@ func TestHandleSync_ValidTokenTriggersAndReturns202(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 	select {
@@ -58,7 +58,7 @@ func TestHandleSync_MissingOrWrongTokenIsRejected(t *testing.T) {
 
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 			select {
@@ -81,7 +81,7 @@ func TestHandleSync_WrongMethodIsRejected(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 }
@@ -99,7 +99,7 @@ func TestHandleSync_PendingTriggerIsNotBlockedByASecondRequest(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 	}
 
@@ -123,7 +123,7 @@ func TestServe_ServesUntilContextCanceled(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 	cancel()

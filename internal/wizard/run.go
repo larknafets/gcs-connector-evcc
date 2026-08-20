@@ -74,14 +74,14 @@ func RunInit(ctx context.Context, configPath string) error {
 
 	remainingForm := huh.NewForm(huh.NewGroup(
 		huh.NewInput().Title("api_key").Value(&answers.APIKey),
-		huh.NewInput().Title("api_secret").Password(true).Value(&answers.APISecret),
+		huh.NewInput().Title("api_secret").EchoMode(huh.EchoModePassword).Value(&answers.APISecret),
 		huh.NewInput().Title("sync_interval_minutes").Description("Default: 60").Value(&answers.SyncIntervalMinutes),
 		huh.NewInput().Title("ignore_vehicles").Description("kommagetrennt, optional").Value(&answers.IgnoreVehicles),
 		huh.NewInput().Title("ignore_loadpoints").Description("kommagetrennt, optional").Value(&answers.IgnoreLoadpoints),
 		huh.NewInput().Title("debug").Description("true/false").Value(&answers.Debug),
 		huh.NewInput().Title("log_file").Description("leer = stdout").Value(&answers.LogFile),
 		huh.NewInput().Title("webhook_port").Description("optional, aktiviert den Webhook-Listener (siehe README)").Value(&answers.WebhookPort),
-		huh.NewInput().Title("webhook_secret").Description("erforderlich, wenn webhook_port gesetzt ist").Password(true).Value(&answers.WebhookSecret),
+		huh.NewInput().Title("webhook_secret").Description("erforderlich, wenn webhook_port gesetzt ist").EchoMode(huh.EchoModePassword).Value(&answers.WebhookSecret),
 	))
 	if err := remainingForm.Run(); err != nil {
 		return fmt.Errorf("wizard: %w", err)

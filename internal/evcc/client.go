@@ -71,7 +71,7 @@ func (c *Client) FetchSessions(ctx context.Context, month, year int) ([]Session,
 	if err != nil {
 		return nil, fmt.Errorf("evcc: fetching sessions: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("evcc: unexpected status %d fetching sessions", resp.StatusCode)
@@ -84,15 +84,7 @@ func (c *Client) FetchSessions(ctx context.Context, month, year int) ([]Session,
 
 	sessions := make([]Session, len(dtos))
 	for i, d := range dtos {
-		sessions[i] = Session{
-			ID:              d.ID,
-			Created:         d.Created,
-			Finished:        d.Finished,
-			Loadpoint:       d.Loadpoint,
-			Vehicle:         d.Vehicle,
-			ChargedEnergy:   d.ChargedEnergy,
-			SolarPercentage: d.SolarPercentage,
-		}
+		sessions[i] = Session(d)
 	}
 	return sessions, nil
 }

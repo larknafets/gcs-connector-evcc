@@ -69,7 +69,7 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	defer closeLogger()
+	defer func() { _ = closeLogger() }()
 
 	gcsClient := gcs.NewClient(cfg.APIBaseURL, cfg.APIKey, cfg.APISecret, logger)
 

@@ -25,7 +25,7 @@ func TestSetupWebhookListener_ReturnsErrorOnPortConflict(t *testing.T) {
 	// conflict with a wildcard bind on every OS.
 	occupied, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
-	defer occupied.Close()
+	defer func() { _ = occupied.Close() }()
 
 	port := occupied.Addr().(*net.TCPAddr).Port
 	cfg := config.Config{Webhook: config.WebhookConfig{Port: port, Secret: "s3cr3t"}}
@@ -62,7 +62,7 @@ func TestSetupWebhookListener_BindsAndAcceptsConnections(t *testing.T) {
 		if dialErr != nil {
 			return false
 		}
-		conn.Close()
+		_ = conn.Close()
 		return true
 	}, time.Second, 10*time.Millisecond, "webhook listener never came up on the bound port")
 

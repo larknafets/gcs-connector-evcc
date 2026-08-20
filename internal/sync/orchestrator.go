@@ -171,7 +171,6 @@ func (o *Orchestrator) RunCycle(ctx context.Context) (CycleResult, error) {
 		return result, err
 	}
 
-	watermark := st.LastSyncedFinishedAt
 	hitFailure := false
 
 	for _, session := range sessions {
@@ -212,7 +211,7 @@ func (o *Orchestrator) RunCycle(ctx context.Context) (CycleResult, error) {
 		}
 
 		if !hitFailure {
-			watermark = *session.Finished
+			watermark := *session.Finished
 			if err := o.Store.Save(state.State{LastSyncedFinishedAt: watermark}); err != nil {
 				return result, fmt.Errorf("sync: persisting state: %w", err)
 			}

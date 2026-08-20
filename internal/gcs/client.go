@@ -129,7 +129,7 @@ func (c *Client) PostCharge(ctx context.Context, payload ChargePayload) (duplica
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
@@ -168,7 +168,7 @@ func (c *Client) GetChargesSince(ctx context.Context, since time.Time) ([]Existi
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrUnauthorized

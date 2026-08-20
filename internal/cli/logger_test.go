@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -14,12 +15,12 @@ func TestBuildLogger_DebugFalseUsesInfoLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer closer()
+	defer func() { _ = closer() }()
 
-	if logger.Enabled(nil, slog.LevelDebug) {
+	if logger.Enabled(context.TODO(), slog.LevelDebug) {
 		t.Error("expected debug level disabled")
 	}
-	if !logger.Enabled(nil, slog.LevelInfo) {
+	if !logger.Enabled(context.TODO(), slog.LevelInfo) {
 		t.Error("expected info level enabled")
 	}
 }
@@ -29,9 +30,9 @@ func TestBuildLogger_DebugTrueUsesDebugLevel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer closer()
+	defer func() { _ = closer() }()
 
-	if !logger.Enabled(nil, slog.LevelDebug) {
+	if !logger.Enabled(context.TODO(), slog.LevelDebug) {
 		t.Error("expected debug level enabled")
 	}
 }
@@ -45,7 +46,7 @@ func TestBuildLogger_WritesToConfiguredLogFile(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	logger.Info("hello")
-	closer()
+	_ = closer()
 
 	raw, err := os.ReadFile(path)
 	if err != nil {
