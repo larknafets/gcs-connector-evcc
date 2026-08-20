@@ -28,7 +28,6 @@ type Config struct {
 	EVCCBaseURL         string
 	APIKey              string
 	APISecret           string
-	SiteName            string
 	SyncIntervalMinutes int
 	IgnoreVehicles      []string
 	IgnoreLoadpoints    []string
@@ -50,7 +49,6 @@ type rawFields struct {
 	EVCCBaseURL         string
 	APIKey              string
 	APISecret           string
-	SiteName            string
 	SyncIntervalMinutes *int
 	WebhookPort         *int
 	WebhookSecret       string
@@ -79,7 +77,6 @@ func FromMap(env map[string]string) (Config, error) {
 		EVCCBaseURL:      env["evcc_base_url"],
 		APIKey:           env["api_key"],
 		APISecret:        env["api_secret"],
-		SiteName:         env["site_name"],
 		IgnoreVehicles:   splitList(env["ignore_vehicles"]),
 		IgnoreLoadpoints: splitList(env["ignore_loadpoints"]),
 		Debug:            strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
@@ -115,7 +112,6 @@ type optionsJSON struct {
 	EVCCBaseURL         string   `json:"evcc_base_url"`
 	APIKey              string   `json:"api_key"`
 	APISecret           string   `json:"api_secret"`
-	SiteName            string   `json:"site_name"`
 	SyncIntervalMinutes *int     `json:"sync_interval_minutes"`
 	IgnoreVehicles      []string `json:"ignore_vehicles"`
 	IgnoreLoadpoints    []string `json:"ignore_loadpoints"`
@@ -150,7 +146,6 @@ func FromOptionsJSON(path string) (Config, error) {
 		EVCCBaseURL:         opts.EVCCBaseURL,
 		APIKey:              opts.APIKey,
 		APISecret:           opts.APISecret,
-		SiteName:            opts.SiteName,
 		SyncIntervalMinutes: opts.SyncIntervalMinutes,
 		IgnoreVehicles:      opts.IgnoreVehicles,
 		IgnoreLoadpoints:    opts.IgnoreLoadpoints,
@@ -181,7 +176,6 @@ func validate(raw rawFields) (Config, error) {
 		{"evcc_base_url", raw.EVCCBaseURL},
 		{"api_key", raw.APIKey},
 		{"api_secret", raw.APISecret},
-		{"site_name", raw.SiteName},
 	} {
 		if strings.TrimSpace(field.value) == "" {
 			return Config{}, fmt.Errorf("config: missing required field %q", field.name)
@@ -212,7 +206,6 @@ func validate(raw rawFields) (Config, error) {
 		EVCCBaseURL:         raw.EVCCBaseURL,
 		APIKey:              raw.APIKey,
 		APISecret:           raw.APISecret,
-		SiteName:            raw.SiteName,
 		SyncIntervalMinutes: interval,
 		IgnoreVehicles:      raw.IgnoreVehicles,
 		IgnoreLoadpoints:    raw.IgnoreLoadpoints,

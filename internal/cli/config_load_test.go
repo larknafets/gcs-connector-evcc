@@ -13,15 +13,13 @@ const validEnvContent = `api_base_url="https://gcs.example.com"
 evcc_base_url="http://192.168.1.50:7070"
 api_key="key123"
 api_secret="secret456"
-site_name="Zuhause Carport"
 `
 
 const validOptionsJSON = `{
 	"api_base_url": "https://gcs.example.com",
 	"evcc_base_url": "http://192.168.1.50:7070",
-	"api_key": "key123",
-	"api_secret": "secret456",
-	"site_name": "Supervisor Carport"
+	"api_key": "key999",
+	"api_secret": "secret999"
 }`
 
 func TestLoadConfig_UsesOptionsJSONWhenPresent(t *testing.T) {
@@ -33,7 +31,7 @@ func TestLoadConfig_UsesOptionsJSONWhenPresent(t *testing.T) {
 	// options.json wins outright rather than merely being tried first.
 	cfg, effectivePath, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath)
 	require.NoError(t, err)
-	assert.Equal(t, "Supervisor Carport", cfg.SiteName)
+	assert.Equal(t, "key999", cfg.APIKey)
 	assert.Equal(t, optionsPath, effectivePath)
 }
 
@@ -44,7 +42,7 @@ func TestLoadConfig_FallsBackToEnvWhenOptionsJSONAbsent(t *testing.T) {
 
 	cfg, effectivePath, err := loadConfig(envPath, filepath.Join(dir, "options.json"))
 	require.NoError(t, err)
-	assert.Equal(t, "Zuhause Carport", cfg.SiteName)
+	assert.Equal(t, "key123", cfg.APIKey)
 	assert.Equal(t, envPath, effectivePath)
 }
 

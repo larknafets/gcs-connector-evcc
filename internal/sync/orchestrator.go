@@ -43,7 +43,6 @@ type Orchestrator struct {
 	EVCC             sessionSource
 	GCS              sessionSink
 	Store            *state.Store
-	SiteName         string
 	IgnoreVehicles   []string
 	IgnoreLoadpoints []string
 	// Now is injectable so tests control which month/year get queried.
@@ -176,7 +175,7 @@ func (o *Orchestrator) RunCycle(ctx context.Context) (CycleResult, error) {
 	hitFailure := false
 
 	for _, session := range sessions {
-		payload, err := ToChargePayload(session, o.SiteName)
+		payload, err := ToChargePayload(session)
 		if err != nil {
 			// Unreachable in practice: eligibleSessions already filters to
 			// finished-only sessions, which is the only precondition
@@ -253,7 +252,7 @@ func (o *Orchestrator) Preview(ctx context.Context) (PreviewResult, error) {
 	}
 
 	for _, session := range sessions {
-		payload, err := ToChargePayload(session, o.SiteName)
+		payload, err := ToChargePayload(session)
 		if err != nil {
 			continue
 		}

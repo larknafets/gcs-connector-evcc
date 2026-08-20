@@ -32,7 +32,6 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 		EVCCBaseURL:         "http://192.168.1.50:7070",
 		APIKey:              "key123",
 		APISecret:           "secret456",
-		SiteName:            "Zuhause Carport",
 		SyncIntervalMinutes: 60,
 		IgnoreVehicles:      []string{"James", "Zweitwagen"},
 		IgnoreLoadpoints:    []string{"Werkstatt"},
@@ -46,7 +45,6 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 	assert.Equal(t, "http://192.168.1.50:7070", a.EVCCBaseURL)
 	assert.Equal(t, "key123", a.APIKey)
 	assert.Equal(t, "secret456", a.APISecret)
-	assert.Equal(t, "Zuhause Carport", a.SiteName)
 	assert.Equal(t, "60", a.SyncIntervalMinutes)
 	assert.Equal(t, "James, Zweitwagen", a.IgnoreVehicles)
 	assert.Equal(t, "Werkstatt", a.IgnoreLoadpoints)
@@ -71,7 +69,6 @@ func TestWriteEnvFile_ProducesConfigThatConfigPackageCanLoad(t *testing.T) {
 		EVCCBaseURL:         "http://192.168.1.50:7070",
 		APIKey:              "key123",
 		APISecret:           "secret456",
-		SiteName:            "Zuhause Carport",
 		SyncIntervalMinutes: "60",
 		IgnoreVehicles:      "James, Zweitwagen",
 		IgnoreLoadpoints:    "",
@@ -98,7 +95,6 @@ func TestWriteEnvFile_RoundTripsWebhookFields(t *testing.T) {
 	answers.EVCCBaseURL = "http://192.168.1.50:7070"
 	answers.APIKey = "k"
 	answers.APISecret = "s"
-	answers.SiteName = "site"
 	answers.WebhookPort = "8080"
 	answers.WebhookSecret = "s3cr3t"
 
@@ -119,7 +115,6 @@ func TestWriteEnvFile_EscapesBackslashesForWindowsPaths(t *testing.T) {
 	answers.EVCCBaseURL = "http://192.168.1.50:7070"
 	answers.APIKey = "k"
 	answers.APISecret = "s"
-	answers.SiteName = "site"
 	answers.SyncIntervalMinutes = "30"
 	answers.LogFile = `C:\Users\me\log.txt`
 
@@ -140,7 +135,6 @@ func TestWriteEnvFile_OverwritesExistingFile(t *testing.T) {
 	answers.EVCCBaseURL = "http://192.168.1.50:7070"
 	answers.APIKey = "k"
 	answers.APISecret = "s"
-	answers.SiteName = "site"
 	answers.SyncIntervalMinutes = "30"
 
 	require.NoError(t, WriteEnvFile(path, answers))

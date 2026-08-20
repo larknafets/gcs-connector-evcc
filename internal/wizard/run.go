@@ -75,7 +75,6 @@ func RunInit(ctx context.Context, configPath string) error {
 	remainingForm := huh.NewForm(huh.NewGroup(
 		huh.NewInput().Title("api_key").Value(&answers.APIKey),
 		huh.NewInput().Title("api_secret").Password(true).Value(&answers.APISecret),
-		huh.NewInput().Title("site_name").Value(&answers.SiteName),
 		huh.NewInput().Title("sync_interval_minutes").Description("Default: 60").Value(&answers.SyncIntervalMinutes),
 		huh.NewInput().Title("ignore_vehicles").Description("kommagetrennt, optional").Value(&answers.IgnoreVehicles),
 		huh.NewInput().Title("ignore_loadpoints").Description("kommagetrennt, optional").Value(&answers.IgnoreLoadpoints),

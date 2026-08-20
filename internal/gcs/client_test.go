@@ -26,7 +26,6 @@ func samplePayload() ChargePayload {
 		ChargedEnergyWh:       7263,
 		GreenPercentage:       float64Ptr(99.94),
 		VehicleName:           "James",
-		SiteName:              "Zuhause Carport",
 	}
 }
 
@@ -82,8 +81,8 @@ func TestPostCharge_SuccessSendsHeadersAndPayload(t *testing.T) {
 	assert.Equal(t, "Garage", gotBody["external_loadpoint_name"])
 	assert.Equal(t, "971", gotBody["external_session_id"])
 	assert.Equal(t, float64(7263), gotBody["charged_energy_wh"])
-	assert.Equal(t, "Zuhause Carport", gotBody["site_name"])
 	assert.InDelta(t, 99.94, gotBody["green_percentage"], 1e-9)
+	assert.NotContains(t, gotBody, "site_name")
 	assert.NotContains(t, gotBody, "clean_percentage")
 	assert.NotContains(t, gotBody, "price")
 	assert.NotContains(t, gotBody, "pricePerKWh")

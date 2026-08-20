@@ -23,7 +23,6 @@ type Answers struct {
 	EVCCBaseURL         string
 	APIKey              string
 	APISecret           string
-	SiteName            string
 	SyncIntervalMinutes string
 	IgnoreVehicles      string
 	IgnoreLoadpoints    string
@@ -57,7 +56,6 @@ func AnswersFromConfig(cfg config.Config) Answers {
 		EVCCBaseURL:         cfg.EVCCBaseURL,
 		APIKey:              cfg.APIKey,
 		APISecret:           cfg.APISecret,
-		SiteName:            cfg.SiteName,
 		SyncIntervalMinutes: fmt.Sprintf("%d", cfg.SyncIntervalMinutes),
 		IgnoreVehicles:      strings.Join(cfg.IgnoreVehicles, ", "),
 		IgnoreLoadpoints:    strings.Join(cfg.IgnoreLoadpoints, ", "),
@@ -95,7 +93,6 @@ var envFieldOrder = []struct {
 	{"evcc_base_url", func(a Answers) string { return a.EVCCBaseURL }},
 	{"api_key", func(a Answers) string { return a.APIKey }},
 	{"api_secret", func(a Answers) string { return a.APISecret }},
-	{"site_name", func(a Answers) string { return a.SiteName }},
 	{"sync_interval_minutes", func(a Answers) string { return a.SyncIntervalMinutes }},
 	{"ignore_vehicles", func(a Answers) string { return a.IgnoreVehicles }},
 	{"ignore_loadpoints", func(a Answers) string { return a.IgnoreLoadpoints }},

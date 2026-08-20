@@ -14,7 +14,7 @@ import (
 // ToChargePayload maps a finished evcc session onto the GCS Connector-API
 // payload. It never reads evcc's price/pricePerKWh/co2PerKWh fields, because
 // evcc.Session has no fields for them in the first place.
-func ToChargePayload(s evcc.Session, siteName string) (gcs.ChargePayload, error) {
+func ToChargePayload(s evcc.Session) (gcs.ChargePayload, error) {
 	if s.Finished == nil {
 		return gcs.ChargePayload{}, fmt.Errorf("sync: session %d has no finished timestamp", s.ID)
 	}
@@ -27,6 +27,5 @@ func ToChargePayload(s evcc.Session, siteName string) (gcs.ChargePayload, error)
 		ChargedEnergyWh:       int(math.Round(s.ChargedEnergy * 1000)),
 		GreenPercentage:       s.SolarPercentage,
 		VehicleName:           s.Vehicle,
-		SiteName:              siteName,
 	}, nil
 }

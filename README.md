@@ -118,7 +118,6 @@ Wird der Connector ohne vorhandene Config gestartet, weist er auf `gcs-connector
 | `evcc_base_url` | ja | Adresse der lokalen evcc-Instanz, z. B. `http://192.168.1.50:7070` |
 | `api_key` | ja | Connector-API-Key (aus dem GCS-Profil, „Connector/API-Zugang“) |
 | `api_secret` | ja | Zugehöriges Secret |
-| `site_name` | ja | Bezeichnung dieser Connector-Instanz, wird bei jeder Ladung mitgeschickt |
 | `sync_interval_minutes` | nein | Sync-Takt in Minuten. Default: `60` |
 | `ignore_vehicles` | nein | Kommagetrennte Liste von evcc-Fahrzeugnamen, die nicht synchronisiert werden sollen |
 | `ignore_loadpoints` | nein | Kommagetrennte Liste von evcc-Ladepunktnamen, die nicht synchronisiert werden sollen |

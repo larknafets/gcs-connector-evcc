@@ -24,7 +24,6 @@ func validRawFields() rawFields {
 		EVCCBaseURL: "http://192.168.1.50:7070",
 		APIKey:      "key123",
 		APISecret:   "secret456",
-		SiteName:    "Zuhause Carport",
 	}
 }
 
@@ -40,7 +39,6 @@ func TestValidate_ValidMinimalConfig(t *testing.T) {
 	assert.Equal(t, "http://192.168.1.50:7070", cfg.EVCCBaseURL)
 	assert.Equal(t, "key123", cfg.APIKey)
 	assert.Equal(t, "secret456", cfg.APISecret)
-	assert.Equal(t, "Zuhause Carport", cfg.SiteName)
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
 	assert.Empty(t, cfg.IgnoreVehicles)
 	assert.Empty(t, cfg.IgnoreLoadpoints)
@@ -134,7 +132,6 @@ func TestValidate_MissingRequiredField(t *testing.T) {
 		"evcc_base_url": func(r *rawFields) { r.EVCCBaseURL = "" },
 		"api_key":       func(r *rawFields) { r.APIKey = "" },
 		"api_secret":    func(r *rawFields) { r.APISecret = "" },
-		"site_name":     func(r *rawFields) { r.SiteName = "" },
 	} {
 		t.Run(field, func(t *testing.T) {
 			raw := validRawFields()
@@ -155,7 +152,6 @@ func validEnv() map[string]string {
 		"evcc_base_url":         "http://192.168.1.50:7070",
 		"api_key":               "key123",
 		"api_secret":            "secret456",
-		"site_name":             "Zuhause Carport",
 		"sync_interval_minutes": "60",
 	}
 }
@@ -264,15 +260,15 @@ func TestFromMap_EmptyIgnoreListsStayEmpty(t *testing.T) {
 }
 
 // TestFromMap_MissingRequiredField proves the wiring from a missing env key
-// to validate's required-field check; the full 5-field rule is covered once,
+// to validate's required-field check; the full 4-field rule is covered once,
 // at the rule level, by TestValidate_MissingRequiredField.
 func TestFromMap_MissingRequiredField(t *testing.T) {
 	env := validEnv()
-	delete(env, "site_name")
+	delete(env, "api_key")
 
 	_, err := FromMap(env)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "site_name")
+	assert.Contains(t, err.Error(), "api_key")
 }
 
 func TestLoad_MissingFile(t *testing.T) {
@@ -287,8 +283,7 @@ func TestFromOptionsJSON_ValidMinimalConfig(t *testing.T) {
 		"api_base_url": "https://gcs.example.com",
 		"evcc_base_url": "http://192.168.1.50:7070",
 		"api_key": "key123",
-		"api_secret": "secret456",
-		"site_name": "Zuhause Carport"
+		"api_secret": "secret456"
 	}`)
 
 	cfg, err := FromOptionsJSON(path)
@@ -302,7 +297,6 @@ func TestFromOptionsJSON_OptionalFieldsCoerced(t *testing.T) {
 		"evcc_base_url": "http://192.168.1.50:7070",
 		"api_key": "key123",
 		"api_secret": "secret456",
-		"site_name": "Zuhause Carport",
 		"ignore_vehicles": ["James", "Kühlschrank Garage"],
 		"ignore_loadpoints": ["Werkstatt"],
 		"debug": true,
@@ -330,7 +324,6 @@ func TestFromOptionsJSON_SyncIntervalExplicitZeroFails(t *testing.T) {
 		"evcc_base_url": "http://192.168.1.50:7070",
 		"api_key": "key123",
 		"api_secret": "secret456",
-		"site_name": "Zuhause Carport",
 		"sync_interval_minutes": 0
 	}`)
 
@@ -350,7 +343,6 @@ func TestFromOptionsJSON_WebhookPortZeroStaysDisabledEvenWhenExplicit(t *testing
 		"evcc_base_url": "http://192.168.1.50:7070",
 		"api_key": "key123",
 		"api_secret": "secret456",
-		"site_name": "Zuhause Carport",
 		"webhook_port": 0
 	}`)
 
@@ -360,19 +352,18 @@ func TestFromOptionsJSON_WebhookPortZeroStaysDisabledEvenWhenExplicit(t *testing
 }
 
 // TestFromOptionsJSON_MissingRequiredField proves the wiring from a missing
-// JSON key to validate's required-field check; the full 5-field rule is
+// JSON key to validate's required-field check; the full 4-field rule is
 // covered once, at the rule level, by TestValidate_MissingRequiredField.
 func TestFromOptionsJSON_MissingRequiredField(t *testing.T) {
 	path := writeOptionsJSON(t, `{
 		"api_base_url": "https://gcs.example.com",
 		"evcc_base_url": "http://192.168.1.50:7070",
-		"api_key": "key123",
 		"api_secret": "secret456"
 	}`)
 
 	_, err := FromOptionsJSON(path)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "site_name")
+	assert.Contains(t, err.Error(), "api_key")
 }
 
 func TestFromOptionsJSON_FileNotFound(t *testing.T) {

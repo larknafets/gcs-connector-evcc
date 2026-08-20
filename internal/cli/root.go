@@ -77,7 +77,6 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 		EVCC:             evcc.NewClient(cfg.EVCCBaseURL),
 		GCS:              gcsClient,
 		Store:            state.NewStore(effectiveConfigPath),
-		SiteName:         cfg.SiteName,
 		IgnoreVehicles:   cfg.IgnoreVehicles,
 		IgnoreLoadpoints: cfg.IgnoreLoadpoints,
 		Logger:           logger,

@@ -43,7 +43,6 @@ type ChargePayload struct {
 	ChargedEnergyWh       int       `json:"charged_energy_wh"`
 	GreenPercentage       *float64  `json:"green_percentage,omitempty"`
 	VehicleName           string    `json:"vehicle_name"`
-	SiteName              string    `json:"site_name"`
 }
 
 // ExistingCharge is a record returned by GET /api/v1/connector/charges?since=,

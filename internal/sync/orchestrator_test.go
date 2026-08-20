@@ -73,7 +73,6 @@ func newTestOrchestrator(t *testing.T, source *fakeSource, sink *fakeSink, now t
 		EVCC:     source,
 		GCS:      sink,
 		Store:    store,
-		SiteName: "Zuhause Carport",
 		Now:      func() time.Time { return now },
 	}
 	return orch, store, configPath

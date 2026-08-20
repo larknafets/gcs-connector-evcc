@@ -24,7 +24,7 @@ func TestToChargePayload_MapsFieldsAndRoundsWh(t *testing.T) {
 		SolarPercentage: &solar,
 	}
 
-	payload, err := ToChargePayload(session, "Zuhause Carport")
+	payload, err := ToChargePayload(session)
 	require.NoError(t, err)
 
 	assert.Equal(t, "Garage", payload.ExternalLoadpointName)
@@ -35,7 +35,6 @@ func TestToChargePayload_MapsFieldsAndRoundsWh(t *testing.T) {
 	require.NotNil(t, payload.GreenPercentage)
 	assert.InDelta(t, solar, *payload.GreenPercentage, 1e-9)
 	assert.Equal(t, "James", payload.VehicleName)
-	assert.Equal(t, "Zuhause Carport", payload.SiteName)
 }
 
 func TestToChargePayload_MissingSolarPercentageOmitted(t *testing.T) {
@@ -49,7 +48,7 @@ func TestToChargePayload_MissingSolarPercentageOmitted(t *testing.T) {
 		ChargedEnergy: 1.0,
 	}
 
-	payload, err := ToChargePayload(session, "Zuhause Carport")
+	payload, err := ToChargePayload(session)
 	require.NoError(t, err)
 	assert.Nil(t, payload.GreenPercentage)
 }
@@ -62,7 +61,7 @@ func TestToChargePayload_RequiresFinishedSession(t *testing.T) {
 		ChargedEnergy: 1.0,
 	}
 
-	_, err := ToChargePayload(session, "Zuhause Carport")
+	_, err := ToChargePayload(session)
 	require.Error(t, err)
 }
 
@@ -75,7 +74,7 @@ func TestToChargePayload_RoundsHalfUp(t *testing.T) {
 		ChargedEnergy: 0.0005, // 0.5 Wh -> rounds to 1 Wh (round half away from zero)
 	}
 
-	payload, err := ToChargePayload(session, "site")
+	payload, err := ToChargePayload(session)
 	require.NoError(t, err)
 	assert.Equal(t, 1, payload.ChargedEnergyWh)
 }
