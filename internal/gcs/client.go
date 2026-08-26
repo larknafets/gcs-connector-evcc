@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -55,7 +56,8 @@ type ExistingCharge struct {
 }
 
 type postChargeResponse struct {
-	Status string `json:"status"`
+	Status   string `json:"status"`
+	PublicID string `json:"public_id"`
 }
 
 // Client talks to a single GCS instance's Connector-API.
@@ -64,6 +66,7 @@ type Client struct {
 	APIKey    string
 	APISecret string
 	HTTP      *retryablehttp.Client
+	Logger    *slog.Logger
 }
 
 // NewClient returns a Client for the GCS instance at baseURL. logger may be
@@ -107,6 +110,7 @@ func NewClient(baseURL, apiKey, apiSecret string, logger *slog.Logger) *Client {
 		APIKey:    apiKey,
 		APISecret: apiSecret,
 		HTTP:      retryClient,
+		Logger:    logger,
 	}
 }
 
@@ -135,6 +139,10 @@ func (c *Client) PostCharge(ctx context.Context, payload ChargePayload) (duplica
 	case http.StatusUnauthorized:
 		return false, ErrUnauthorized
 	case http.StatusUnprocessableEntity:
+		if c.Logger != nil {
+			respBody, _ := io.ReadAll(resp.Body)
+			c.Logger.Warn("gcs: invalid payload", "response_body", string(respBody))
+		}
 		return false, ErrInvalidPayload
 	case http.StatusTooManyRequests:
 		return false, ErrRateLimited
@@ -147,6 +155,9 @@ func (c *Client) PostCharge(ctx context.Context, payload ChargePayload) (duplica
 	var parsed postChargeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return false, fmt.Errorf("gcs: decoding response: %w", err)
+	}
+	if c.Logger != nil && parsed.PublicID != "" {
+		c.Logger.Debug("gcs: charge synced", "public_id", parsed.PublicID, "duplicate", parsed.Status == "duplicate_skipped")
 	}
 	return parsed.Status == "duplicate_skipped", nil
 }
