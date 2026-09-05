@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	stdsync "sync"
 	"testing"
 	"time"
@@ -66,8 +65,7 @@ func (f *fakeSink) GetChargesSince(ctx context.Context, since time.Time) ([]gcs.
 func newTestOrchestrator(t *testing.T, source *fakeSource, sink *fakeSink, now time.Time) (*Orchestrator, *state.Store, string) {
 	t.Helper()
 	dir := t.TempDir()
-	configPath := filepath.Join(dir, ".env")
-	store := state.NewStore(configPath)
+	store := state.NewStore(dir)
 
 	orch := &Orchestrator{
 		EVCC:  source,
@@ -75,7 +73,7 @@ func newTestOrchestrator(t *testing.T, source *fakeSource, sink *fakeSink, now t
 		Store: store,
 		Now:   func() time.Time { return now },
 	}
-	return orch, store, configPath
+	return orch, store, dir
 }
 
 func TestRunCycle_HappyPath_SendsAllNewFinishedSessions(t *testing.T) {

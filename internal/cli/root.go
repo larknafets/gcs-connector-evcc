@@ -60,7 +60,7 @@ func Execute() error {
 // runMain loads the config and either runs one dry-run preview or starts
 // the daemon loop, depending on dryRun.
 func runMain(ctx context.Context, configPath string, dryRun bool) error {
-	cfg, effectiveConfigPath, err := loadConfig(configPath, defaultSupervisorOptionsPath)
+	cfg, stateDir, err := loadConfig(configPath, defaultSupervisorOptionsPath, defaultSupervisorStateDir)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func runMain(ctx context.Context, configPath string, dryRun bool) error {
 	orch := &gcssync.Orchestrator{
 		EVCC:             evcc.NewClient(cfg.EVCCBaseURL),
 		GCS:              gcsClient,
-		Store:            state.NewStore(effectiveConfigPath),
+		Store:            state.NewStore(stateDir),
 		IgnoreVehicles:   cfg.IgnoreVehicles,
 		IgnoreLoadpoints: cfg.IgnoreLoadpoints,
 		Logger:           logger,

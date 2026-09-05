@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/larknafets/gcs-connector-evcc/internal/config"
 )
@@ -15,21 +16,28 @@ import (
 // flag.
 const defaultSupervisorOptionsPath = "/data/options.json"
 
+// defaultSupervisorStateDir is where state.json lives under Supervisor: the
+// add-on's addon_config mount (map: addon_config:rw in config.yaml), which
+// the Supervisor host exposes under app_configs/<slug> - unlike
+// /data (where options.json lives), it's user-visible via Samba/SSH and not
+// swept up in the private, undocumented add-on data folder.
+const defaultSupervisorStateDir = "/config"
+
 // loadConfig loads the connector's config, preferring optionsPath (the
 // Supervisor's options.json) when it exists, falling back to the .env-based
 // configPath otherwise - so binary/Docker Compose/wizard usage is
 // unaffected on hosts where optionsPath never exists. It also returns the
-// path callers should pass to state.NewStore, so state.json ends up
-// co-located with whichever config source was actually used (this lands
-// state.json under /data automatically in the Supervisor case, since
-// state.NewStore derives its directory from this path).
-func loadConfig(configPath, optionsPath string) (cfg config.Config, effectiveConfigPath string, err error) {
+// directory callers should pass to state.NewStore: supervisorStateDir for
+// the Supervisor case, or configPath's own directory otherwise (matching
+// the Docker/binary convention of keeping .env and state.json side by
+// side).
+func loadConfig(configPath, optionsPath, supervisorStateDir string) (cfg config.Config, stateDir string, err error) {
 	if _, statErr := os.Stat(optionsPath); statErr == nil {
 		cfg, err = config.FromOptionsJSON(optionsPath)
 		if err != nil {
 			return config.Config{}, "", fmt.Errorf("ungültige Supervisor-Config unter %s: %w", optionsPath, err)
 		}
-		return cfg, optionsPath, nil
+		return cfg, supervisorStateDir, nil
 	}
 
 	if _, statErr := os.Stat(configPath); errors.Is(statErr, os.ErrNotExist) {
@@ -40,5 +48,5 @@ func loadConfig(configPath, optionsPath string) (cfg config.Config, effectiveCon
 	if err != nil {
 		return config.Config{}, "", fmt.Errorf("ungültige Config unter %s: %w", configPath, err)
 	}
-	return cfg, configPath, nil
+	return cfg, filepath.Dir(configPath), nil
 }

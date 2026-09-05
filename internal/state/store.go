@@ -29,17 +29,14 @@ type envelope struct {
 	LastSyncedFinishedAt time.Time `json:"last_synced_finished_at"`
 }
 
-// Store reads/writes state.json next to the resolved config file.
+// Store reads/writes state.json in a given directory.
 type Store struct {
 	statePath string
 	lockPath  string
 }
 
-// NewStore returns a Store whose state.json lives in the same directory as
-// configPath (the resolved .env file, e.g. from --config or the default
-// location).
-func NewStore(configPath string) *Store {
-	dir := filepath.Dir(configPath)
+// NewStore returns a Store whose state.json lives directly in dir.
+func NewStore(dir string) *Store {
 	return &Store{
 		statePath: filepath.Join(dir, "state.json"),
 		lockPath:  filepath.Join(dir, "state.json.lock"),

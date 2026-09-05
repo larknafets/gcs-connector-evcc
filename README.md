@@ -86,7 +86,7 @@ services:
 
 ### Home Assistant Add-on
 
-Wer evcc über Home Assistant betreibt, kann den Connector auch als Supervisor-Add-on installieren, konfiguriert über die native Home-Assistant-Options-UI statt einer `.env`-Datei — siehe [gcs-ha-addons](https://github.com/larknafets/gcs-ha-addons).
+Wer evcc über Home Assistant betreibt, kann den Connector auch als Supervisor-Add-on installieren, konfiguriert über die native Home-Assistant-Options-UI statt einer `.env`-Datei — siehe [gcs-ha-addons](https://github.com/larknafets/gcs-ha-addons). Die `state.json` (Watermark) liegt dabei unter `/config` im Add-on-Container, was Home Assistant host-seitig unter `app_configs/gcs-connector-evcc` einhängt — per Samba/SSH/File-Editor einsehbar, im Unterschied zum privaten, nicht einsehbaren `/data`-Verzeichnis.
 
 ### Aus dem Quellcode bauen
 

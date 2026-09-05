@@ -29,10 +29,10 @@ func TestLoadConfig_UsesOptionsJSONWhenPresent(t *testing.T) {
 
 	// configPath deliberately points at a .env that doesn't exist, to prove
 	// options.json wins outright rather than merely being tried first.
-	cfg, effectivePath, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath)
+	cfg, stateDir, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath, "/config")
 	require.NoError(t, err)
 	assert.Equal(t, "key999", cfg.APIKey)
-	assert.Equal(t, optionsPath, effectivePath)
+	assert.Equal(t, "/config", stateDir)
 }
 
 func TestLoadConfig_FallsBackToEnvWhenOptionsJSONAbsent(t *testing.T) {
@@ -40,17 +40,17 @@ func TestLoadConfig_FallsBackToEnvWhenOptionsJSONAbsent(t *testing.T) {
 	envPath := filepath.Join(dir, ".env")
 	require.NoError(t, os.WriteFile(envPath, []byte(validEnvContent), 0o600))
 
-	cfg, effectivePath, err := loadConfig(envPath, filepath.Join(dir, "options.json"))
+	cfg, stateDir, err := loadConfig(envPath, filepath.Join(dir, "options.json"), "/config")
 	require.NoError(t, err)
 	assert.Equal(t, "key123", cfg.APIKey)
-	assert.Equal(t, envPath, effectivePath)
+	assert.Equal(t, dir, stateDir)
 }
 
 func TestLoadConfig_MissingBothReturnsFriendlyInitHint(t *testing.T) {
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
 
-	_, _, err := loadConfig(envPath, filepath.Join(dir, "options.json"))
+	_, _, err := loadConfig(envPath, filepath.Join(dir, "options.json"), "/config")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "gcs-connector init")
 }
@@ -60,7 +60,7 @@ func TestLoadConfig_InvalidOptionsJSONSurfacesError(t *testing.T) {
 	optionsPath := filepath.Join(dir, "options.json")
 	require.NoError(t, os.WriteFile(optionsPath, []byte(`{"api_base_url": ""}`), 0o600))
 
-	_, _, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath)
+	_, _, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath, "/config")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Supervisor-Config")
 }
@@ -70,7 +70,18 @@ func TestLoadConfig_InvalidEnvSurfacesError(t *testing.T) {
 	envPath := filepath.Join(dir, ".env")
 	require.NoError(t, os.WriteFile(envPath, []byte(`api_base_url="only this field"`), 0o600))
 
-	_, _, err := loadConfig(envPath, filepath.Join(dir, "options.json"))
+	_, _, err := loadConfig(envPath, filepath.Join(dir, "options.json"), "/config")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ungültige Config")
+}
+
+func TestLoadConfig_SupervisorModeUsesGivenStateDirNotOptionsJSONDir(t *testing.T) {
+	dir := t.TempDir()
+	optionsPath := filepath.Join(dir, "options.json")
+	require.NoError(t, os.WriteFile(optionsPath, []byte(validOptionsJSON), 0o600))
+
+	_, stateDir, err := loadConfig(filepath.Join(dir, "nonexistent.env"), optionsPath, "/config")
+	require.NoError(t, err)
+	assert.Equal(t, "/config", stateDir)
+	assert.NotEqual(t, dir, stateDir)
 }

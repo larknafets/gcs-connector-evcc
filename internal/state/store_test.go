@@ -13,7 +13,7 @@ import (
 
 func TestLoad_MissingFileReturnsZeroStateNotCorrupted(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	st, corrupted, err := store.Load()
 	require.NoError(t, err)
@@ -24,7 +24,7 @@ func TestLoad_MissingFileReturnsZeroStateNotCorrupted(t *testing.T) {
 func TestLoad_CorruptFileReturnsZeroStateAndCorruptedFlag(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "state.json"), []byte("{not valid json"), 0o644))
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	st, corrupted, err := store.Load()
 	require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestLoad_CorruptFileReturnsZeroStateAndCorruptedFlag(t *testing.T) {
 func TestLoad_UnknownVersionTreatedAsCorrupted(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "state.json"), []byte(`{"version":99,"last_synced_finished_at":"2026-08-14T10:00:00Z"}`), 0o644))
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	_, corrupted, err := store.Load()
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestLoad_UnknownVersionTreatedAsCorrupted(t *testing.T) {
 
 func TestSaveThenLoad_Roundtrips(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	watermark := time.Date(2026, 8, 15, 8, 0, 3, 0, time.UTC)
 	require.NoError(t, store.Save(State{LastSyncedFinishedAt: watermark}))
@@ -57,7 +57,7 @@ func TestSaveThenLoad_Roundtrips(t *testing.T) {
 
 func TestSave_WritesAtomicallyNoLeftoverTempFiles(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	require.NoError(t, store.Save(State{LastSyncedFinishedAt: time.Now()}))
 
@@ -69,7 +69,7 @@ func TestSave_WritesAtomicallyNoLeftoverTempFiles(t *testing.T) {
 
 func TestSave_WritesVersionField(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 	require.NoError(t, store.Save(State{LastSyncedFinishedAt: time.Now()}))
 
 	raw, err := os.ReadFile(filepath.Join(dir, "state.json"))
@@ -79,7 +79,7 @@ func TestSave_WritesVersionField(t *testing.T) {
 
 func TestLock_SecondAcquireFailsWhileFirstHeld(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -91,14 +91,14 @@ func TestLock_SecondAcquireFailsWhileFirstHeld(t *testing.T) {
 	shortCtx, shortCancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer shortCancel()
 
-	other := NewStore(filepath.Join(dir, ".env"))
+	other := NewStore(dir)
 	_, err = other.Lock(shortCtx)
 	require.Error(t, err)
 }
 
 func TestLock_ReleasedAfterUnlockAllowsReacquire(t *testing.T) {
 	dir := t.TempDir()
-	store := NewStore(filepath.Join(dir, ".env"))
+	store := NewStore(dir)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -107,7 +107,7 @@ func TestLock_ReleasedAfterUnlockAllowsReacquire(t *testing.T) {
 	require.NoError(t, err)
 	unlock()
 
-	other := NewStore(filepath.Join(dir, ".env"))
+	other := NewStore(dir)
 	unlock2, err := other.Lock(ctx)
 	require.NoError(t, err)
 	unlock2()
