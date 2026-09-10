@@ -1,5 +1,19 @@
 /dist/
+
+# Claude Code project settings/state - local to this machine, never shared
+/.claude/
+.mcp.json
+
+# local dev artifacts
+*.db
+*.log
+.env
 *.env
 !.env.example
 state.json
 state.json.lock
+.DS_Store
+
+# graft's local graph cache for this project, never shared
+/graft/
+.ignore
