@@ -29,7 +29,7 @@ type Config struct {
 	APIKey              string
 	APISecret           string
 	SyncIntervalMinutes int
-	IgnoreVehicles      []string
+	SyncVehicles        []string
 	IgnoreLoadpoints    []string
 	Debug               bool
 	LogFile             string
@@ -52,7 +52,7 @@ type rawFields struct {
 	SyncIntervalMinutes *int
 	WebhookPort         *int
 	WebhookSecret       string
-	IgnoreVehicles      []string
+	SyncVehicles        []string
 	IgnoreLoadpoints    []string
 	Debug               bool
 	LogFile             string
@@ -77,7 +77,7 @@ func FromMap(env map[string]string) (Config, error) {
 		EVCCBaseURL:      env["evcc_base_url"],
 		APIKey:           env["api_key"],
 		APISecret:        env["api_secret"],
-		IgnoreVehicles:   splitList(env["ignore_vehicles"]),
+		SyncVehicles:     splitList(env["sync_vehicles"]),
 		IgnoreLoadpoints: splitList(env["ignore_loadpoints"]),
 		Debug:            strings.EqualFold(strings.TrimSpace(env["debug"]), "true"),
 		LogFile:          env["log_file"],
@@ -105,7 +105,7 @@ func FromMap(env map[string]string) (Config, error) {
 // /data/options.json - the Supervisor's only way of delivering config to an
 // add-on container (never a .env file, never per-field environment
 // variables). Field names match the .env variable names 1:1. Unlike .env,
-// ignore_vehicles/ignore_loadpoints arrive as real JSON arrays rather than a
+// sync_vehicles/ignore_loadpoints arrive as real JSON arrays rather than a
 // comma-separated string.
 type optionsJSON struct {
 	APIBaseURL          string   `json:"api_base_url"`
@@ -113,7 +113,7 @@ type optionsJSON struct {
 	APIKey              string   `json:"api_key"`
 	APISecret           string   `json:"api_secret"`
 	SyncIntervalMinutes *int     `json:"sync_interval_minutes"`
-	IgnoreVehicles      []string `json:"ignore_vehicles"`
+	SyncVehicles        []string `json:"sync_vehicles"`
 	IgnoreLoadpoints    []string `json:"ignore_loadpoints"`
 	Debug               bool     `json:"debug"`
 	LogFile             string   `json:"log_file"`
@@ -147,7 +147,7 @@ func FromOptionsJSON(path string) (Config, error) {
 		APIKey:              opts.APIKey,
 		APISecret:           opts.APISecret,
 		SyncIntervalMinutes: opts.SyncIntervalMinutes,
-		IgnoreVehicles:      opts.IgnoreVehicles,
+		SyncVehicles:        opts.SyncVehicles,
 		IgnoreLoadpoints:    opts.IgnoreLoadpoints,
 		Debug:               opts.Debug,
 		LogFile:             opts.LogFile,
@@ -207,7 +207,7 @@ func validate(raw rawFields) (Config, error) {
 		APIKey:              raw.APIKey,
 		APISecret:           raw.APISecret,
 		SyncIntervalMinutes: interval,
-		IgnoreVehicles:      raw.IgnoreVehicles,
+		SyncVehicles:        raw.SyncVehicles,
 		IgnoreLoadpoints:    raw.IgnoreLoadpoints,
 		Debug:               raw.Debug,
 		LogFile:             raw.LogFile,

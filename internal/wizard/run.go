@@ -76,7 +76,7 @@ func RunInit(ctx context.Context, configPath string) error {
 		huh.NewInput().Title("api_key").Value(&answers.APIKey),
 		huh.NewInput().Title("api_secret").EchoMode(huh.EchoModePassword).Value(&answers.APISecret),
 		huh.NewInput().Title("sync_interval_minutes").Description("Default: 60").Value(&answers.SyncIntervalMinutes),
-		huh.NewInput().Title("ignore_vehicles").Description("kommagetrennt, optional").Value(&answers.IgnoreVehicles),
+		huh.NewInput().Title("sync_vehicles").Description("kommagetrennt, optional").Value(&answers.SyncVehicles),
 		huh.NewInput().Title("ignore_loadpoints").Description("kommagetrennt, optional").Value(&answers.IgnoreLoadpoints),
 		huh.NewInput().Title("debug").Description("true/false").Value(&answers.Debug),
 		huh.NewInput().Title("log_file").Description("leer = stdout").Value(&answers.LogFile),

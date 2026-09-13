@@ -68,10 +68,11 @@ func newTestOrchestrator(t *testing.T, source *fakeSource, sink *fakeSink, now t
 	store := state.NewStore(dir)
 
 	orch := &Orchestrator{
-		EVCC:  source,
-		GCS:   sink,
-		Store: store,
-		Now:   func() time.Time { return now },
+		EVCC:         source,
+		GCS:          sink,
+		Store:        store,
+		Now:          func() time.Time { return now },
+		SyncVehicles: []string{"James"}, // matches the Vehicle used by most fixtures in this file
 	}
 	return orch, store, dir
 }
@@ -196,7 +197,7 @@ func TestRunCycle_UnfinishedSessionNotSent(t *testing.T) {
 	assert.Empty(t, sink.posts)
 }
 
-func TestRunCycle_IgnoredVehicleNotSent(t *testing.T) {
+func TestRunCycle_UnlistedVehicleNotSent(t *testing.T) {
 	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
 	source := &fakeSource{sessions: map[string][]evcc.Session{
 		"8-2026": {
@@ -206,13 +207,29 @@ func TestRunCycle_IgnoredVehicleNotSent(t *testing.T) {
 	}}
 	sink := &fakeSink{}
 
-	orch, _, _ := newTestOrchestrator(t, source, sink, now)
-	orch.IgnoreVehicles = []string{"kühlschrank garage"}
+	orch, _, _ := newTestOrchestrator(t, source, sink, now) // SyncVehicles defaults to ["James"]
 
 	result, err := orch.RunCycle(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, 0, result.Sent)
 	assert.Empty(t, sink.posts)
+}
+
+func TestRunCycle_UnknownVehicleAlwaysSentRegardlessOfAllowlist(t *testing.T) {
+	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{sessions: map[string][]evcc.Session{
+		"8-2026": {
+			{ID: 1, Created: mustTime("2026-08-14T10:00:00Z"), Finished: mustTimePtr("2026-08-14T11:00:00Z"), Loadpoint: "Garage", Vehicle: "", ChargedEnergy: 1.0},
+		},
+		"7-2026": {},
+	}}
+	sink := &fakeSink{}
+
+	orch, _, _ := newTestOrchestrator(t, source, sink, now) // SyncVehicles defaults to ["James"], doesn't list this guest
+
+	result, err := orch.RunCycle(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Sent)
 }
 
 func TestRunCycle_PartialFailure_WatermarkStopsAtFirstFailure(t *testing.T) {

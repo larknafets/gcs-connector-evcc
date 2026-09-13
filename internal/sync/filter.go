@@ -9,15 +9,16 @@ import (
 )
 
 // filterEligible narrows sessions down to the ones a sync cycle should
-// consider sending: finished, after watermark, not on an ignore list, sorted
-// ascending by Finished. It owns the order internally - sortByFinished
-// dereferences Finished unconditionally, so it must run after finished-only
-// sessions have been isolated; the other two steps are order-independent
-// with respect to each other and to that constraint.
-func filterEligible(sessions []evcc.Session, watermark time.Time, ignoreVehicles, ignoreLoadpoints []string) []evcc.Session {
+// consider sending: finished, after watermark, vehicle-allowed and
+// loadpoint-not-ignored, sorted ascending by Finished. It owns the order
+// internally - sortByFinished dereferences Finished unconditionally, so it
+// must run after finished-only sessions have been isolated; the other two
+// steps are order-independent with respect to each other and to that
+// constraint.
+func filterEligible(sessions []evcc.Session, watermark time.Time, syncVehicles, ignoreLoadpoints []string) []evcc.Session {
 	eligible := filterFinished(sessions)
 	eligible = filterAfterWatermark(eligible, watermark)
-	eligible = filterIgnored(eligible, ignoreVehicles, ignoreLoadpoints)
+	eligible = filterAllowed(eligible, syncVehicles, ignoreLoadpoints)
 	return sortByFinished(eligible)
 }
 
@@ -46,15 +47,22 @@ func filterAfterWatermark(sessions []evcc.Session, watermark time.Time) []evcc.S
 	return result
 }
 
-// filterIgnored drops sessions whose Vehicle or Loadpoint matches one of the
-// configured ignore lists, exactly and case-insensitively.
-func filterIgnored(sessions []evcc.Session, ignoreVehicles, ignoreLoadpoints []string) []evcc.Session {
-	vehicles := toLowerSet(ignoreVehicles)
+// filterAllowed keeps sessions whose Vehicle is either empty (evcc couldn't
+// attribute the session to a known vehicle - a guest charge, always synced)
+// or listed in syncVehicles, and drops sessions whose Loadpoint matches
+// ignoreLoadpoints. Both lists match exactly and case-insensitively; an
+// empty syncVehicles list allows no named vehicle through, guest sessions
+// excepted.
+func filterAllowed(sessions []evcc.Session, syncVehicles, ignoreLoadpoints []string) []evcc.Session {
+	vehicles := toLowerSet(syncVehicles)
 	loadpoints := toLowerSet(ignoreLoadpoints)
 
 	result := make([]evcc.Session, 0, len(sessions))
 	for _, s := range sessions {
-		if vehicles[strings.ToLower(s.Vehicle)] || loadpoints[strings.ToLower(s.Loadpoint)] {
+		if s.Vehicle != "" && !vehicles[strings.ToLower(s.Vehicle)] {
+			continue
+		}
+		if loadpoints[strings.ToLower(s.Loadpoint)] {
 			continue
 		}
 		result = append(result, s)

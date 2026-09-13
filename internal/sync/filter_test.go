@@ -53,23 +53,31 @@ func TestFilterAfterWatermark_ZeroWatermarkKeepsAll(t *testing.T) {
 	assert.Len(t, result, 1)
 }
 
-func TestFilterIgnored_MatchesVehicleAndLoadpointCaseInsensitively(t *testing.T) {
+func TestFilterAllowed_MatchesVehicleAllowlistAndLoadpointIgnoreListCaseInsensitively(t *testing.T) {
 	sessions := []evcc.Session{
 		{ID: 1, Vehicle: "James", Loadpoint: "Garage"},
-		{ID: 2, Vehicle: "kühlschrank garage", Loadpoint: "Garage"},
+		{ID: 2, Vehicle: "Werkstattwagen", Loadpoint: "Garage"},
 		{ID: 3, Vehicle: "James", Loadpoint: "Werkstatt"},
 	}
 
-	result := filterIgnored(sessions, []string{"Kühlschrank Garage"}, []string{"WERKSTATT"})
+	result := filterAllowed(sessions, []string{"JAMES"}, []string{"WERKSTATT"})
 	assert.Len(t, result, 1)
 	assert.Equal(t, 1, result[0].ID)
 }
 
-func TestFilterIgnored_EmptyListsKeepEverything(t *testing.T) {
+func TestFilterAllowed_EmptySyncVehiclesBlocksNamedVehicles(t *testing.T) {
 	sessions := []evcc.Session{
 		{ID: 1, Vehicle: "James", Loadpoint: "Garage"},
 	}
-	result := filterIgnored(sessions, nil, nil)
+	result := filterAllowed(sessions, nil, nil)
+	assert.Empty(t, result)
+}
+
+func TestFilterAllowed_UnknownVehicleAlwaysPassesRegardlessOfAllowlist(t *testing.T) {
+	sessions := []evcc.Session{
+		{ID: 1, Vehicle: "", Loadpoint: "Garage"},
+	}
+	result := filterAllowed(sessions, []string{"James"}, nil)
 	assert.Len(t, result, 1)
 }
 

@@ -24,7 +24,7 @@ type Answers struct {
 	APIKey              string
 	APISecret           string
 	SyncIntervalMinutes string
-	IgnoreVehicles      string
+	SyncVehicles        string
 	IgnoreLoadpoints    string
 	Debug               string
 	LogFile             string
@@ -57,7 +57,7 @@ func AnswersFromConfig(cfg config.Config) Answers {
 		APIKey:              cfg.APIKey,
 		APISecret:           cfg.APISecret,
 		SyncIntervalMinutes: fmt.Sprintf("%d", cfg.SyncIntervalMinutes),
-		IgnoreVehicles:      strings.Join(cfg.IgnoreVehicles, ", "),
+		SyncVehicles:        strings.Join(cfg.SyncVehicles, ", "),
 		IgnoreLoadpoints:    strings.Join(cfg.IgnoreLoadpoints, ", "),
 		Debug:               debug,
 		LogFile:             cfg.LogFile,
@@ -94,7 +94,7 @@ var envFieldOrder = []struct {
 	{"api_key", func(a Answers) string { return a.APIKey }},
 	{"api_secret", func(a Answers) string { return a.APISecret }},
 	{"sync_interval_minutes", func(a Answers) string { return a.SyncIntervalMinutes }},
-	{"ignore_vehicles", func(a Answers) string { return a.IgnoreVehicles }},
+	{"sync_vehicles", func(a Answers) string { return a.SyncVehicles }},
 	{"ignore_loadpoints", func(a Answers) string { return a.IgnoreLoadpoints }},
 	{"debug", func(a Answers) string { return a.Debug }},
 	{"log_file", func(a Answers) string { return a.LogFile }},

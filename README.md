@@ -15,7 +15,7 @@ Der Connector ist **optional** — ohne ihn funktioniert GCS weiterhin über man
 3. evcc's Feld `solarPercentage` wird als `green_percentage` übertragen. **Preis- und CO₂-Daten aus evcc werden nie an GCS weitergegeben** — sie verlassen den Connector nicht (GCS ist explizit keine Bezahlplattform).
 4. Bereits gesendete Sessions werden lokal in einer `state.json` vermerkt (Watermark), damit nichts doppelt gesendet wird — GCS erkennt Duplikate serverseitig zusätzlich ab.
 5. Bei Verbindungsproblemen (evcc oder GCS nicht erreichbar, Rate-Limit) wird nur gewarnt und beim nächsten Takt automatisch erneut versucht — kein Absturz, keine manuelle Eingriffe nötig.
-6. Fahrzeuge oder Ladepunkte lassen sich über `ignore_vehicles`/`ignore_loadpoints` von der Synchronisation ausschließen (z. B. ein privater Zweitwagen oder ein Nicht-EV-Ladepunkt).
+6. Nur Fahrzeuge in `sync_vehicles` werden synchronisiert (Allowlist); Sessions ohne erkanntes Fahrzeug (evcc liefert kein `vehicle`, z. B. Gastfahrzeuge) werden unabhängig davon immer übernommen. Ladepunkte lassen sich zusätzlich über `ignore_loadpoints` ausschließen (z. B. ein Nicht-EV-Ladepunkt).
 
 ## Installation
 
@@ -119,7 +119,7 @@ Wird der Connector ohne vorhandene Config gestartet, weist er auf `gcs-connector
 | `api_key` | ja | Connector-API-Key (aus dem GCS-Profil, „Connector/API-Zugang“) |
 | `api_secret` | ja | Zugehöriges Secret |
 | `sync_interval_minutes` | nein | Sync-Takt in Minuten. Default: `60` |
-| `ignore_vehicles` | nein | Kommagetrennte Liste von evcc-Fahrzeugnamen, die nicht synchronisiert werden sollen |
+| `sync_vehicles` | nein | Kommagetrennte Liste von evcc-Fahrzeugnamen, die synchronisiert werden sollen (Allowlist). Sessions ohne erkanntes Fahrzeug (z. B. Gastfahrzeuge) werden immer übernommen, unabhängig von dieser Liste. Leer = kein benanntes Fahrzeug wird synchronisiert |
 | `ignore_loadpoints` | nein | Kommagetrennte Liste von evcc-Ladepunktnamen, die nicht synchronisiert werden sollen |
 | `debug` | nein | `true`/`false` — ausführliches Logging inkl. HTTP-Request-Details |
 | `log_file` | nein | Pfad zur Log-Datei; leer = Ausgabe auf stdout |

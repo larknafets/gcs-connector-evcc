@@ -40,7 +40,7 @@ func TestValidate_ValidMinimalConfig(t *testing.T) {
 	assert.Equal(t, "key123", cfg.APIKey)
 	assert.Equal(t, "secret456", cfg.APISecret)
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
-	assert.Empty(t, cfg.IgnoreVehicles)
+	assert.Empty(t, cfg.SyncVehicles)
 	assert.Empty(t, cfg.IgnoreLoadpoints)
 	assert.False(t, cfg.Debug)
 	assert.Equal(t, "", cfg.LogFile)
@@ -112,7 +112,7 @@ func TestValidate_WebhookPortOutOfRangeWhenSet(t *testing.T) {
 
 func TestValidate_OptionalFieldsParsed(t *testing.T) {
 	raw := validRawFields()
-	raw.IgnoreVehicles = []string{"James", "Kühlschrank Garage"}
+	raw.SyncVehicles = []string{"James", "Kühlschrank Garage"}
 	raw.IgnoreLoadpoints = []string{"Werkstatt"}
 	raw.Debug = true
 	raw.LogFile = "/var/log/gcs-connector.log"
@@ -120,7 +120,7 @@ func TestValidate_OptionalFieldsParsed(t *testing.T) {
 	cfg, err := validate(raw)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.SyncVehicles)
 	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
 	assert.True(t, cfg.Debug)
 	assert.Equal(t, "/var/log/gcs-connector.log", cfg.LogFile)
@@ -235,7 +235,7 @@ func TestFromMap_WebhookPortNotANumberFails(t *testing.T) {
 
 func TestFromMap_OptionalFieldsCoerced(t *testing.T) {
 	env := validEnv()
-	env["ignore_vehicles"] = "James, Kühlschrank Garage"
+	env["sync_vehicles"] = "James, Kühlschrank Garage"
 	env["ignore_loadpoints"] = "Werkstatt"
 	env["debug"] = "true"
 	env["log_file"] = "/var/log/gcs-connector.log"
@@ -243,7 +243,7 @@ func TestFromMap_OptionalFieldsCoerced(t *testing.T) {
 	cfg, err := FromMap(env)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.SyncVehicles)
 	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
 	assert.True(t, cfg.Debug)
 	assert.Equal(t, "/var/log/gcs-connector.log", cfg.LogFile)
@@ -251,12 +251,12 @@ func TestFromMap_OptionalFieldsCoerced(t *testing.T) {
 
 func TestFromMap_EmptyIgnoreListsStayEmpty(t *testing.T) {
 	env := validEnv()
-	env["ignore_vehicles"] = ""
+	env["sync_vehicles"] = ""
 
 	cfg, err := FromMap(env)
 	require.NoError(t, err)
 
-	assert.Empty(t, cfg.IgnoreVehicles)
+	assert.Empty(t, cfg.SyncVehicles)
 }
 
 // TestFromMap_MissingRequiredField proves the wiring from a missing env key
@@ -297,7 +297,7 @@ func TestFromOptionsJSON_OptionalFieldsCoerced(t *testing.T) {
 		"evcc_base_url": "http://192.168.1.50:7070",
 		"api_key": "key123",
 		"api_secret": "secret456",
-		"ignore_vehicles": ["James", "Kühlschrank Garage"],
+		"sync_vehicles": ["James", "Kühlschrank Garage"],
 		"ignore_loadpoints": ["Werkstatt"],
 		"debug": true,
 		"log_file": "/var/log/gcs-connector.log",
@@ -307,7 +307,7 @@ func TestFromOptionsJSON_OptionalFieldsCoerced(t *testing.T) {
 
 	cfg, err := FromOptionsJSON(path)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"James", "Kühlschrank Garage"}, cfg.SyncVehicles)
 	assert.Equal(t, []string{"Werkstatt"}, cfg.IgnoreLoadpoints)
 	assert.True(t, cfg.Debug)
 	assert.Equal(t, "/var/log/gcs-connector.log", cfg.LogFile)

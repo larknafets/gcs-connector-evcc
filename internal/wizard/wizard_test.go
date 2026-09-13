@@ -19,7 +19,7 @@ func TestDefaultAnswers_PrefillsOptionalFieldsOnly(t *testing.T) {
 	assert.Equal(t, "false", a.Debug)
 	assert.Equal(t, "60", a.SyncIntervalMinutes)
 	assert.Equal(t, "", a.LogFile)
-	assert.Equal(t, "", a.IgnoreVehicles)
+	assert.Equal(t, "", a.SyncVehicles)
 	assert.Equal(t, "", a.IgnoreLoadpoints)
 	assert.Equal(t, "", a.APIBaseURL)
 	assert.Equal(t, "", a.WebhookPort)
@@ -33,7 +33,7 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 		APIKey:              "key123",
 		APISecret:           "secret456",
 		SyncIntervalMinutes: 60,
-		IgnoreVehicles:      []string{"James", "Zweitwagen"},
+		SyncVehicles:        []string{"James", "Zweitwagen"},
 		IgnoreLoadpoints:    []string{"Werkstatt"},
 		Debug:               true,
 		LogFile:             "/var/log/gcs.log",
@@ -46,7 +46,7 @@ func TestAnswersFromConfig_RoundTripsAllFields(t *testing.T) {
 	assert.Equal(t, "key123", a.APIKey)
 	assert.Equal(t, "secret456", a.APISecret)
 	assert.Equal(t, "60", a.SyncIntervalMinutes)
-	assert.Equal(t, "James, Zweitwagen", a.IgnoreVehicles)
+	assert.Equal(t, "James, Zweitwagen", a.SyncVehicles)
 	assert.Equal(t, "Werkstatt", a.IgnoreLoadpoints)
 	assert.Equal(t, "true", a.Debug)
 	assert.Equal(t, "/var/log/gcs.log", a.LogFile)
@@ -70,7 +70,7 @@ func TestWriteEnvFile_ProducesConfigThatConfigPackageCanLoad(t *testing.T) {
 		APIKey:              "key123",
 		APISecret:           "secret456",
 		SyncIntervalMinutes: "60",
-		IgnoreVehicles:      "James, Zweitwagen",
+		SyncVehicles:        "James, Zweitwagen",
 		IgnoreLoadpoints:    "",
 		Debug:               "true",
 		LogFile:             "",
@@ -82,7 +82,7 @@ func TestWriteEnvFile_ProducesConfigThatConfigPackageCanLoad(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "https://gcs.example.com", cfg.APIBaseURL)
 	assert.Equal(t, 60, cfg.SyncIntervalMinutes)
-	assert.Equal(t, []string{"James", "Zweitwagen"}, cfg.IgnoreVehicles)
+	assert.Equal(t, []string{"James", "Zweitwagen"}, cfg.SyncVehicles)
 	assert.True(t, cfg.Debug)
 }
 

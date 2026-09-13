@@ -43,7 +43,7 @@ type Orchestrator struct {
 	EVCC             sessionSource
 	GCS              sessionSink
 	Store            *state.Store
-	IgnoreVehicles   []string
+	SyncVehicles     []string
 	IgnoreLoadpoints []string
 	// Now is injectable so tests control which month/year get queried.
 	Now func() time.Time
@@ -135,7 +135,7 @@ func (o *Orchestrator) eligibleSessions(ctx context.Context, watermark time.Time
 		all = append(all, results[i]...)
 	}
 
-	return filterEligible(all, watermark, o.IgnoreVehicles, o.IgnoreLoadpoints), nil
+	return filterEligible(all, watermark, o.SyncVehicles, o.IgnoreLoadpoints), nil
 }
 
 // RunCycle performs one full sync: fetch from evcc, filter, map, send each
