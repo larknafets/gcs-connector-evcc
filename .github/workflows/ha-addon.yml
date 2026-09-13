@@ -5,10 +5,15 @@ on:
     workflows: ["Release"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to mirror (e.g. v0.1.0) - use this to retry a mirror after a workflow fix"
+        required: true
 
 jobs:
   hassio:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout gcs-ha-addons
@@ -20,7 +25,7 @@ jobs:
 
       - name: Update version
         env:
-          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+          GITHUB_REF_NAME: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           version="${GITHUB_REF_NAME#v}"
           sed -i -e "s/^version:.*/version: \"${version}\"/" ./hassio/gcs-connector-evcc/config.yaml
@@ -45,7 +50,7 @@ jobs:
 
       - name: Push
         env:
-          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+          GITHUB_REF_NAME: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           cd ./hassio
           git config user.name github-actions
