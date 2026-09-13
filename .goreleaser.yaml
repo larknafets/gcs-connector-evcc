@@ -71,6 +71,9 @@ changelog:
     - title: "Refactoring"
       regexp: '(?i)^refactor(\(.+\))?!?:'
       order: 40
+    - title: "Reverts"
+      regexp: '(?i)^revert(\(.+\))?!?:'
+      order: 50
     - title: "Other Changes"
       order: 999
 
