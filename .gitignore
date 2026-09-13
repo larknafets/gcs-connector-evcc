@@ -7,7 +7,6 @@
 # local dev artifacts
 *.db
 *.log
-.env
 *.env
 !.env.example
 state.json
@@ -17,3 +16,6 @@ state.json.lock
 # graft's local graph cache for this project, never shared
 /graft/
 .ignore
+
+# built binary (matches module name, e.g. from `go build ./cmd/gcs-connector`)
+/gcs-connector
