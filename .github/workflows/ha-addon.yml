@@ -25,9 +25,9 @@ jobs:
 
       - name: Update version
         env:
-          GITHUB_REF_NAME: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           sed -i -e "s/^version:.*/version: \"${version}\"/" ./hassio/gcs-connector-evcc/config.yaml
 
       - name: Generate changelog
@@ -50,11 +50,11 @@ jobs:
 
       - name: Push
         env:
-          GITHUB_REF_NAME: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           cd ./hassio
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add gcs-connector-evcc/config.yaml gcs-connector-evcc/CHANGELOG.md
-          git commit -m "Mirror gcs-connector-evcc release ${GITHUB_REF_NAME}"
+          git commit -m "Mirror gcs-connector-evcc release ${RELEASE_TAG}"
           git push
