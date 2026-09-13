@@ -1,0 +1,55 @@
+name: Update HA Add-on
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+
+jobs:
+  hassio:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gcs-ha-addons
+        uses: actions/checkout@v4
+        with:
+          repository: larknafets/gcs-ha-addons
+          token: ${{ secrets.HASSIO_DEPLOY_TOKEN }}
+          path: ./hassio
+
+      - name: Update version
+        env:
+          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sed -i -e "s/^version:.*/version: \"${version}\"/" ./hassio/gcs-connector-evcc/config.yaml
+
+      - name: Generate changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/larknafets/gcs-connector-evcc/releases --paginate | jq -s '
+            [.[][] | select(.draft == false and .prerelease == false)]
+            | sort_by(.published_at)
+            | reverse
+            | .[]
+            | "## \(.tag_name) - \(.published_at | split("T")[0])\n\n\((.body // "No release notes.")
+            | gsub("(?m)^\\* [0-9a-f]{7,40} "; "* ")
+            | sub("^# Changelog\n\n"; "")
+            | sub("^##(?!#)[^\n]*\n\n"; "")
+          ' -r > /tmp/changelog_entries.md
+
+          printf '%s\n\n%s\n\n' '# Changelog' 'Full release details: https://github.com/larknafets/gcs-connector-evcc/releases' > ./hassio/gcs-connector-evcc/CHANGELOG.md
+          cat /tmp/changelog_entries.md >> ./hassio/gcs-connector-evcc/CHANGELOG.md
+
+      - name: Push
+        env:
+          GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          cd ./hassio
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add gcs-connector-evcc/config.yaml gcs-connector-evcc/CHANGELOG.md
+          git commit -m "Mirror gcs-connector-evcc release ${GITHUB_REF_NAME}"
+          git push
