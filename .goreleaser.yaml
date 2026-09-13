@@ -45,7 +45,7 @@ changelog:
   sort: desc
   abbrev: 7
   format: >-
-    {{ .SHA }} {{ trimprefix (trimprefix (trimprefix (trimprefix (trimprefix .Message "feat: ") "fix: ") "refactor: ") "docs: ") "style: " }}
+    {{ .SHA }} {{ trimprefix (trimprefix (trimprefix (trimprefix (trimprefix (trimprefix (trimprefix (trimprefix (trimprefix (trimprefix .Message "feat: ") "feat!: ") "fix: ") "fix!: ") "refactor: ") "refactor!: ") "docs: ") "docs!: ") "style: ") "style!: " }}
   filters:
     exclude:
       - "^chore"
@@ -58,19 +58,19 @@ changelog:
       - "^style"
   groups:
     - title: "Breaking Changes"
-      regexp: '(?i)\(BC\)|\bBREAKING CHANGE\b'
+      regexp: '(?i)\(BC\)|\bBREAKING CHANGE\b|^\w+(\(.+\))?!:'
       order: 10
     - title: "Experimental Features"
       regexp: '(?i)\(experimental\)'
       order: 25
     - title: "Bug Fixes"
-      regexp: '(?i)^fix(\(.+\))?:|\bfix\b'
+      regexp: '(?i)^fix(\(.+\))?!?:|\bfix\b'
       order: 30
     - title: "New Features"
-      regexp: '(?i)^feat(\(.+\))?:|\badd\b'
+      regexp: '(?i)^feat(\(.+\))?!?:|\badd\b'
       order: 20
     - title: "Refactoring"
-      regexp: '(?i)^refactor(\(.+\))?:'
+      regexp: '(?i)^refactor(\(.+\))?!?:'
       order: 40
     - title: "Other Changes"
       order: 999
