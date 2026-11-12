@@ -1,10 +1,10 @@
 module github.com/larknafets/gcs-connector-evcc
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/charmbracelet/huh v1.0.0
-	github.com/gofrs/flock v0.13.1
+	github.com/gofrs/flock v0.13.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.10.2
@@ -40,6 +40,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )
